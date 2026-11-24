@@ -1,2452 +1,1469 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RecallKids Studio - Fun Fact Reader & Quiz Maker</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Kid-Friendly Rounded Google Fonts: Fredoka (Display), Nunito (Readable Body), Quicksand (UI) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;600;700;800&family=Quicksand:wght@600;700&display=swap" rel="stylesheet">
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RecallKids Studio — Snap, Read & Play Quiz!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    :root {
+      --bg-cream: #FFFDF6;
+      --card-white: #FFFFFF;
+      --sun-yellow: #FFD84D;
+      --sun-deep: #F59E0B;
+      --sky-blue: #38BDF8;
+      --sky-deep: #0284C7;
+      --mint-green: #34D399;
+      --mint-deep: #059669;
+      --coral-pink: #FB7185;
+      --coral-deep: #E11D48;
+      --berry-purple: #A78BFA;
+      --berry-deep: #7C3AED;
+      --ink-dark: #1E293B;
+      --ink-soft: #475569;
+      --border-soft: #E2E8F0;
+      --shadow-chunky: 0 6px 0 rgba(30, 41, 59, 0.12);
+    }
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        display: ['Fredoka', 'Nunito', 'sans-serif'],
-                        sans: ['Nunito', 'Quicksand', 'system-ui', 'sans-serif'],
-                    },
-                    colors: {
-                        sunny: {
-                            bg: '#FFFDF7',
-                            card: '#FFFFFF',
-                            soft: '#FEF7E6',
-                            border: '#FDE68A',
-                        },
-                        brand: {
-                            orange: '#FF7A2F',
-                            orangeDark: '#E66319',
-                            blue: '#2B8CEE',
-                            blueDark: '#1C74D1',
-                            teal: '#14B8A6',
-                            purple: '#8B5CF6',
-                            yellow: '#F59E0B',
-                            green: '#10B981',
-                            pink: '#EC4899',
-                            ink: '#1E293B',
-                            muted: '#475569',
-                        }
-                    },
-                    boxShadow: {
-                        'tactile': '0 4px 0 0 rgba(30, 41, 59, 0.12)',
-                        'tactile-orange': '0 4px 0 0 #C8500E',
-                        'tactile-blue': '0 4px 0 0 #165BA8',
-                        'tactile-green': '0 4px 0 0 #059669',
-                        'tactile-purple': '0 4px 0 0 #6D28D9',
-                    }
-                }
-            }
-        }
-    </script>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Nunito', sans-serif;
+      background: var(--bg-cream);
+      background-image: radial-gradient(#FDE68A 1.5px, transparent 1.5px);
+      background-size: 28px 28px;
+      color: var(--ink-dark);
+      min-height: 100vh;
+    }
 
-    <style>
-        body {
-            background-color: #FFFDF7;
-            background-image: radial-gradient(#FDE68A 1px, transparent 1px);
-            background-size: 24px 24px;
-            color: #1E293B;
-            -webkit-font-smoothing: antialiased;
-        }
+    h1, h2, h3, .font-display {
+      font-family: 'Fredoka', sans-serif;
+      letter-spacing: 0.01em;
+    }
 
-        .btn-bounce {
-            transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease;
-        }
-        .btn-bounce:active {
-            transform: translateY(3px);
-            box-shadow: none !important;
-        }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
 
-        /* Peek-a-Boo Word Tiles (Cloze Deletion for Kids) */
-        .peek-tile {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            padding: 0.1rem 0.65rem;
-            margin: 0.1rem 0.15rem;
-            border-radius: 0.75rem;
-            font-weight: 800;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            user-select: none;
-        }
-        .peek-hidden {
-            background: linear-gradient(135deg, #8B5CF6, #6366F1);
-            color: transparent;
-            border: 2px solid #4F46E5;
-            box-shadow: 0 3px 0 #4338CA;
-        }
-        .peek-hidden::after {
-            content: "TAP TO PEEK";
-            color: #FFFFFF;
-            font-size: 0.72em;
-            letter-spacing: 0.04em;
-        }
-        .peek-revealed {
-            background-color: #FEF3C7;
-            color: #B45309;
-            border: 2px solid #F59E0B;
-            transform: scale(1.03);
-        }
+    /* Top Bar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(255, 253, 246, 0.94);
+      backdrop-filter: blur(8px);
+      border-bottom: 3px solid #FDE68A;
+      padding: 12px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
 
-        @keyframes floatStar {
-            0% { transform: translateY(0) scale(0.8) rotate(0deg); opacity: 1; }
-            100% { transform: translateY(-90px) scale(1.35) rotate(25deg); opacity: 0; }
-        }
-        .star-burst {
-            position: fixed;
-            pointer-events: none;
-            z-index: 9999;
-            animation: floatStar 0.9s ease-out forwards;
-        }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
 
-        @keyframes popIn {
-            0% { transform: scale(0.92); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        .animate-pop {
-            animation: popIn 0.24s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        }
+    .brand-badge {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #FFD84D, #FB923C);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      box-shadow: 0 4px 0 #D97706;
+      font-size: 26px;
+    }
 
-        @keyframes scanBeam {
-            0% { top: 4%; opacity: 0.9; }
-            50% { top: 88%; opacity: 1; }
-            100% { top: 4%; opacity: 0.9; }
-        }
-        .scan-beam {
-            position: absolute;
-            left: 0;
-            right: 0;
-            height: 6px;
-            background: linear-gradient(90deg, transparent, #38BDF8, #F59E0B, #38BDF8, transparent);
-            box-shadow: 0 0 18px 4px rgba(56, 189, 248, 0.75);
-            border-radius: 999px;
-            animation: scanBeam 2.1s ease-in-out infinite;
-        }
+    .brand-title {
+      font-size: 1.45rem;
+      font-weight: 700;
+      margin: 0;
+      line-height: 1.1;
+    }
 
-        @media print {
-            .no-print { display: none !important; }
-            body { background: #FFFFFF !important; background-image: none !important; color: #000000 !important; }
-            .print-only { display: block !important; }
-        }
-    </style>
+    .brand-sub {
+      font-size: 0.85rem;
+      color: var(--ink-soft);
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    /* Chunky Kid Buttons */
+    .btn {
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 600;
+      font-size: 1rem;
+      border: 3px solid transparent;
+      border-radius: 18px;
+      padding: 10px 18px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.15s ease;
+      user-select: none;
+      text-decoration: none;
+    }
+    .btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 rgba(30, 41, 59, 0.18) !important;
+    }
+
+    .btn-sun {
+      background: var(--sun-yellow);
+      color: #78350F;
+      box-shadow: 0 5px 0 #D97706;
+    }
+    .btn-sun:hover { background: #FDE047; }
+
+    .btn-sky {
+      background: var(--sky-blue);
+      color: #fff;
+      box-shadow: 0 5px 0 var(--sky-deep);
+    }
+    .btn-sky:hover { background: #0EA5E9; }
+
+    .btn-mint {
+      background: var(--mint-green);
+      color: #064E3B;
+      box-shadow: 0 5px 0 var(--mint-deep);
+    }
+    .btn-mint:hover { background: #10B981; color: #fff; }
+
+    .btn-coral {
+      background: var(--coral-pink);
+      color: #fff;
+      box-shadow: 0 5px 0 var(--coral-deep);
+    }
+    .btn-coral:hover { background: #F43F5E; }
+
+    .btn-berry {
+      background: var(--berry-purple);
+      color: #fff;
+      box-shadow: 0 5px 0 var(--berry-deep);
+    }
+    .btn-berry:hover { background: #8B5CF6; }
+
+    .btn-soft {
+      background: #fff;
+      color: var(--ink-dark);
+      border-color: var(--border-soft);
+      box-shadow: 0 4px 0 #CBD5E1;
+    }
+    .btn-soft:hover { background: #F8FAFC; }
+
+    .star-pill {
+      background: #FEF3C7;
+      border: 3px solid #F59E0B;
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-family: 'Fredoka', sans-serif;
+      font-weight: 700;
+      color: #92400E;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 1rem;
+    }
+
+    /* Main Layout */
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 22px 18px 64px;
+    }
+
+    /* Instant Camera Hero Banner */
+    .camera-hero {
+      background: linear-gradient(135deg, #FEF08A 0%, #FDE68A 50%, #FED7AA 100%);
+      border: 4px solid #F59E0B;
+      border-radius: 28px;
+      padding: 22px 24px;
+      box-shadow: 0 8px 0 #D97706;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .camera-hero-text h2 {
+      margin: 0 0 6px;
+      font-size: 1.65rem;
+      color: #78350F;
+    }
+
+    .camera-hero-text p {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #92400E;
+      max-width: 560px;
+    }
+
+    .camera-hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-hero-camera {
+      font-size: 1.2rem;
+      padding: 15px 26px;
+      border-radius: 22px;
+      background: #E11D48;
+      color: #fff;
+      box-shadow: 0 6px 0 #9F1239;
+    }
+    .btn-hero-camera:hover { background: #BE123C; }
+
+    /* Deck Selector Strip */
+    .deck-strip {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+
+    .deck-chip {
+      background: #fff;
+      border: 3px solid #E2E8F0;
+      border-radius: 20px;
+      padding: 10px 16px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--ink-dark);
+      cursor: pointer;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 0 #CBD5E1;
+      transition: all 0.15s ease;
+    }
+    .deck-chip.active {
+      background: #E0F2FE;
+      border-color: var(--sky-deep);
+      color: #0369A1;
+      box-shadow: 0 4px 0 var(--sky-deep);
+    }
+
+    /* Navigation Tabs */
+    .nav-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+    @media (max-width: 680px) {
+      .nav-tabs { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .nav-tab {
+      background: #fff;
+      border: 3px solid #E2E8F0;
+      border-radius: 20px;
+      padding: 12px 14px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--ink-soft);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 5px 0 #CBD5E1;
+    }
+    .nav-tab.active {
+      background: var(--berry-purple);
+      border-color: var(--berry-deep);
+      color: #fff;
+      box-shadow: 0 5px 0 var(--berry-deep);
+    }
+
+    /* Cards & Panels */
+    .panel {
+      background: var(--card-white);
+      border: 3px solid #E2E8F0;
+      border-radius: 26px;
+      padding: 22px;
+      box-shadow: var(--shadow-chunky);
+      margin-bottom: 20px;
+    }
+
+    .panel-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Fact Cards */
+    .fact-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .fact-card {
+      background: #F8FAFC;
+      border: 3px solid #CBD5E1;
+      border-radius: 20px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      font-size: 1.15rem;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .peek-blank {
+      display: inline-block;
+      background: #FDE047;
+      border: 2px dashed #D97706;
+      color: #78350F;
+      border-radius: 10px;
+      padding: 2px 12px;
+      cursor: pointer;
+      font-family: 'Fredoka', sans-serif;
+      transition: transform 0.15s ease;
+    }
+    .peek-blank:hover { transform: scale(1.05); }
+    .peek-revealed {
+      background: #D1FAE5;
+      border: 2px solid #059669;
+      color: #065F46;
+      border-radius: 10px;
+      padding: 2px 10px;
+    }
+
+    /* Quiz Stage */
+    .quiz-box {
+      background: #F0F9FF;
+      border: 4px solid #38BDF8;
+      border-radius: 28px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .quiz-prompt {
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.65rem;
+      color: #0F172A;
+      margin: 14px 0 22px;
+      line-height: 1.35;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .option-btn {
+      background: #fff;
+      border: 3px solid #94A3B8;
+      border-radius: 20px;
+      padding: 16px 18px;
+      font-family: 'Fredoka', sans-serif;
+      font-size: 1.2rem;
+      color: var(--ink-dark);
+      cursor: pointer;
+      box-shadow: 0 5px 0 #94A3B8;
+      transition: all 0.15s ease;
+    }
+    .option-btn:hover:not(:disabled) {
+      background: #FEF9C3;
+      border-color: #EAB308;
+      transform: translateY(-2px);
+    }
+    .option-btn.correct {
+      background: #A7F3D0;
+      border-color: #059669;
+      color: #064E3B;
+      box-shadow: 0 5px 0 #059669;
+    }
+    .option-btn.wrong {
+      background: #FECDD3;
+      border-color: #E11D48;
+      color: #881337;
+      box-shadow: 0 5px 0 #E11D48;
+    }
+
+    .feedback-banner {
+      border-radius: 20px;
+      padding: 16px;
+      margin-top: 16px;
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+    .feedback-good {
+      background: #D1FAE5;
+      border: 3px solid #10B981;
+      color: #065F46;
+    }
+    .feedback-try {
+      background: #FFE4E6;
+      border: 3px solid #F43F5E;
+      color: #9F1239;
+    }
+
+    /* Fullscreen Photo Scanner Overlay */
+    .scanner-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .scanner-overlay.open { display: flex; }
+
+    .scanner-card {
+      background: #FFFDF6;
+      border: 4px solid #F59E0B;
+      border-radius: 30px;
+      max-width: 520px;
+      width: 100%;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .scan-preview-wrap {
+      position: relative;
+      width: 100%;
+      max-height: 240px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 3px solid #38BDF8;
+      background: #0F172A;
+      margin: 14px 0;
+    }
+
+    .scan-preview-wrap img {
+      width: 100%;
+      height: 230px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .scan-beam {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, transparent, #34D399, #FFD84D, #34D399, transparent);
+      box-shadow: 0 0 16px #34D399;
+      animation: scanMove 1.8s ease-in-out infinite;
+    }
+
+    @keyframes scanMove {
+      0%, 100% { top: 8%; }
+      50% { top: 88%; }
+    }
+
+    .scan-steps {
+      text-align: left;
+      display: grid;
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .scan-step {
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: #F1F5F9;
+      font-weight: 800;
+      color: #64748B;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .scan-step.active {
+      background: #FEF3C7;
+      color: #92400E;
+      border: 2px solid #F59E0B;
+    }
+    .scan-step.done {
+      background: #D1FAE5;
+      color: #065F46;
+      border: 2px solid #10B981;
+    }
+
+    /* Badges Grid */
+    .badge-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .badge-item {
+      border: 3px solid #E2E8F0;
+      border-radius: 22px;
+      padding: 18px;
+      text-align: center;
+      background: #F8FAFC;
+    }
+    .badge-item.unlocked {
+      background: #FEF9C3;
+      border-color: #F59E0B;
+    }
+
+    .hidden { display: none !important; }
+
+    textarea, input[type="text"], select {
+      width: 100%;
+      font-family: 'Nunito', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 12px 14px;
+      border: 3px solid #CBD5E1;
+      border-radius: 16px;
+      background: #fff;
+      color: var(--ink-dark);
+    }
+
+    @media print {
+      .topbar, .camera-hero, .deck-strip, .nav-tabs, .no-print { display: none !important; }
+      body { background: #fff; }
+      .panel { box-shadow: none; border: 2px solid #000; }
+    }
+  </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body>
 
-    <!-- Offscreen-Accessible One-Tap Camera / Photo Input (Reliable for label triggers on iOS/Android/Desktop) -->
-    <input id="instant-photo-input" type="file" accept="image/*" capture="environment" onchange="handleInstantPhotoSelected(event)" class="sr-only">
+  <!-- Hidden Accessible Photo Inputs -->
+  <input id="cameraPhotoInput" class="sr-only" type="file" accept="image/*" capture="environment" />
+  <input id="galleryPhotoInput" class="sr-only" type="file" accept="image/*" />
 
-    <!-- Parent API Key Settings Modal -->
-    <div id="settings-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-        <div class="bg-white border-4 border-amber-300 rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop space-y-4">
-            <div class="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-2xl">🔑</span>
-                    <h3 class="font-display text-xl font-bold text-slate-800">Parent AI Settings</h3>
-                </div>
-                <button type="button" onclick="closeSettingsModal()" class="p-2 rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200" aria-label="Close Settings">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <p class="text-sm font-semibold text-slate-600 leading-relaxed">
-                Optional: Enter a Google Gemini API key so the Photo-to-Quiz scanner and Magic Question Maker can read any custom homework photo. Without a key, the app still works offline with built-in smart fallbacks!
-            </p>
-            <div>
-                <label for="parent-api-key-input" class="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1.5">Gemini API Key (Saved only on this device)</label>
-                <input id="parent-api-key-input" type="password" placeholder="AIzaSy..." class="w-full px-4 py-3 text-base font-bold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-blue">
-            </div>
-            <div class="flex justify-end gap-3 pt-2">
-                <button type="button" onclick="clearParentApiKey()" class="btn-bounce px-4 py-2.5 text-sm font-bold rounded-2xl border-2 border-slate-200 text-slate-600 hover:bg-slate-50">Clear Key</button>
-                <button type="button" onclick="saveParentApiKey()" class="btn-bounce px-5 py-2.5 text-sm font-bold rounded-2xl bg-brand-blue text-white shadow-tactile-blue hover:bg-brand-blueDark">Save Settings ⭐</button>
-            </div>
-        </div>
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">🌟</div>
+      <div>
+        <h1 class="brand-title">RecallKids Studio</h1>
+        <p class="brand-sub">Snap a Page • Read Aloud • Play Quiz!</p>
+      </div>
     </div>
 
-    <!-- Full-Screen Fun Magic Photo Scanner Overlay -->
-    <div id="magic-scanner-overlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/75 backdrop-blur-md p-4">
-        <div class="bg-white border-4 border-sky-300 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl text-center space-y-5 animate-pop">
-            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 border-2 border-amber-300 text-amber-900 font-extrabold text-xs uppercase tracking-wider">
-                <span>✨</span>
-                <span>Magic Photo-to-Quiz Scanner</span>
-                <span>✨</span>
-            </div>
-
-            <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-800">
-                Making Your Quiz Right Now!
-            </h2>
-
-            <!-- Photo Preview with Animated Scanning Beam -->
-            <div class="relative rounded-3xl border-4 border-amber-300 bg-sunny-soft p-2 overflow-hidden max-h-56 flex items-center justify-center">
-                <img id="scanner-preview-img" alt="Your snapped study photo" class="max-h-48 rounded-2xl object-contain mx-auto">
-                <div class="scan-beam"></div>
-            </div>
-
-            <!-- 3-Step Animated Progress Tracker -->
-            <div class="space-y-2.5 text-left bg-sunny-soft border-2 border-amber-200 rounded-2xl p-4">
-                <div id="scan-step-1" class="flex items-center gap-3 font-extrabold text-sm sm:text-base text-brand-blue">
-                    <span class="text-xl">👀</span>
-                    <span>1. Looking at your photo...</span>
-                </div>
-                <div id="scan-step-2" class="flex items-center gap-3 font-bold text-sm sm:text-base text-slate-400">
-                    <span class="text-xl">🧠</span>
-                    <span>2. Finding cool facts to remember...</span>
-                </div>
-                <div id="scan-step-3" class="flex items-center gap-3 font-bold text-sm sm:text-base text-slate-400">
-                    <span class="text-xl">🎯</span>
-                    <span>3. Building your quiz questions!</span>
-                </div>
-            </div>
-        </div>
+    <div class="top-actions">
+      <label for="cameraPhotoInput" class="btn btn-coral" title="Take a photo of your study page">
+        📸 Photo Quiz
+      </label>
+      <button id="autoReadBtn" type="button" class="btn btn-soft" onclick="toggleAutoReadAloud()">
+        🔊 Auto-Read: ON
+      </button>
+      <button id="soundBtn" type="button" class="btn btn-soft" onclick="toggleSound()">
+        🎵 Sounds: ON
+      </button>
+      <div class="star-pill" title="Stars earned from quizzes">
+        ⭐ <span id="starCount">0</span> Stars
+      </div>
     </div>
+  </header>
 
-    <!-- Friendly Toast Banner -->
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-4 sm:px-0"></div>
+  <main class="container">
+    <!-- Hero Camera Banner -->
+    <section class="camera-hero">
+      <div class="camera-hero-text">
+        <h2>📸 Turn Any Study Page Into a Quiz!</h2>
+        <p>Take a picture of your homework, book page, or notes—Gemini AI reads it and builds a fun quiz right away!</p>
+      </div>
+      <div class="camera-hero-actions">
+        <label for="cameraPhotoInput" class="btn btn-hero-camera">
+          📷 Take a Photo!
+        </label>
+        <label for="galleryPhotoInput" class="btn btn-sun">
+          🖼️ Choose Picture
+        </label>
+        <button type="button" class="btn btn-soft" onclick="runSamplePhotoDemo()">
+          ✨ Try Sample Page
+        </button>
+      </div>
+    </section>
 
-    <!-- Custom Kid-Friendly Confirm Modal -->
-    <div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
-        <div class="bg-white border-4 border-amber-300 rounded-3xl max-w-md w-full p-6 shadow-2xl animate-pop">
-            <div class="text-3xl mb-2">🤔</div>
-            <h3 id="confirm-title" class="font-display text-xl font-bold text-slate-800 mb-2">Are you sure?</h3>
-            <p id="confirm-message" class="text-base text-slate-600 mb-6 leading-relaxed"></p>
-            <div class="flex justify-end gap-3">
-                <button id="confirm-cancel" class="btn-bounce px-5 py-2.5 text-base font-bold rounded-2xl border-2 border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100">Keep It</button>
-                <button id="confirm-ok" class="btn-bounce px-5 py-2.5 text-base font-bold rounded-2xl bg-brand-orange text-white shadow-tactile-orange hover:bg-brand-orangeDark">Yes, Do It</button>
-            </div>
+    <!-- Deck Picker -->
+    <div id="deckStrip" class="deck-strip" aria-label="Study Topics"></div>
+
+    <!-- Main Mode Tabs -->
+    <nav class="nav-tabs" aria-label="Activity Tabs">
+      <button type="button" class="nav-tab active" data-tab="read" onclick="switchTab('read')">
+        📖 1. Read Facts
+      </button>
+      <button type="button" class="nav-tab" data-tab="quiz" onclick="switchTab('quiz')">
+        🎯 2. Quiz Time!
+      </button>
+      <button type="button" class="nav-tab" data-tab="make" onclick="switchTab('make')">
+        ✏️ 3. Add Facts
+      </button>
+      <button type="button" class="nav-tab" data-tab="badges" onclick="switchTab('badges')">
+        🏆 4. My Stars
+      </button>
+    </nav>
+
+    <!-- TAB 1: READ & PEEK-A-BOO -->
+    <section id="tab-read" class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title" id="activeDeckHeading">🚀 Amazing Space & Planets</h2>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-sky" onclick="readAllFactsAloud()">
+            🔊 Read All Out Loud
+          </button>
+          <button type="button" id="peekToggleBtn" class="btn btn-sun" onclick="togglePeekMode()">
+            🙈 Peek-a-Boo Words: OFF
+          </button>
+          <button type="button" class="btn btn-mint" onclick="startQuizNow()">
+            ▶️ Start Quiz!
+          </button>
         </div>
+      </div>
+
+      <div id="deckPhotoBanner" class="hidden" style="margin-bottom:16px; text-align:center;">
+        <img id="deckPhotoThumb" alt="Scanned study page" style="max-height:170px; border-radius:18px; border:3px solid #F59E0B;" />
+      </div>
+
+      <div id="factList" class="fact-list"></div>
+    </section>
+
+    <!-- TAB 2: QUIZ TIME -->
+    <section id="tab-quiz" class="panel hidden">
+      <div class="panel-header">
+        <h2 class="panel-title">🎯 Quiz Time!</h2>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <span id="quizProgressText" style="font-weight:800; color:#475569;">Question 1 of 4</span>
+          <button type="button" class="btn btn-soft" onclick="restartQuiz()">🔄 Restart</button>
+        </div>
+      </div>
+
+      <div id="quizStage" class="quiz-box"></div>
+    </section>
+
+    <!-- TAB 3: ADD FACTS & QUESTIONS -->
+    <section id="tab-make" class="panel hidden">
+      <div class="panel-header">
+        <h2 class="panel-title">✏️ Type or Paste Study Notes</h2>
+      </div>
+      <p style="font-weight:700; color:#475569; margin-top:0;">
+        Write a few short sentences below and tap <strong>Make Facts & Quiz</strong>!
+      </p>
+      <input id="customDeckTitle" type="text" placeholder="Topic Name (Example: Dinosaurs or Spelling Words)" style="margin-bottom:12px;" />
+      <textarea id="customNotesInput" rows="4" placeholder="Example: Butterflies taste with their feet. Caterpillars turn into butterflies inside a chrysalis. Monarch butterflies fly south for the winter."></textarea>
+      <div style="margin-top:14px; display:flex; gap:12px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-mint" onclick="createDeckFromNotes()">
+          ✨ Make Facts & Quiz
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 4: BADGES & PRINTABLE SHEET -->
+    <section id="tab-badges" class="panel hidden">
+      <div class="panel-header">
+        <h2 class="panel-title">🏆 Star Collection & Practice Sheet</h2>
+        <button type="button" class="btn btn-sky no-print" onclick="window.print()">
+          🖨️ Print Practice Page
+        </button>
+      </div>
+      <div id="badgeGrid" class="badge-grid" style="margin-bottom:22px;"></div>
+      <div id="printableSummary"></div>
+    </section>
+  </main>
+
+  <!-- Fullscreen Photo Scanner Modal -->
+  <div id="scannerOverlay" class="scanner-overlay" role="dialog" aria-modal="true" aria-label="Scanning Study Page">
+    <div class="scanner-card">
+      <h2 style="margin:0; font-size:1.6rem; color:#78350F;">🔍 Reading Your Study Page!</h2>
+      <p id="scannerSubtitle" style="margin:6px 0 0; font-weight:700; color:#92400E;">
+        Hold tight while Gemini AI builds your quiz...
+      </p>
+
+      <div class="scan-preview-wrap">
+        <img id="scannerPreviewImg" alt="Your study photo" />
+        <div class="scan-beam"></div>
+      </div>
+
+      <div class="scan-steps">
+        <div id="step1" class="scan-step active">1️⃣ Looking at your photo...</div>
+        <div id="step2" class="scan-step">2️⃣ Finding important facts...</div>
+        <div id="step3" class="scan-step">3️⃣ Building your quiz questions...</div>
+      </div>
+
+      <button type="button" class="btn btn-soft" onclick="cancelScanner()">Cancel</button>
     </div>
+  </div>
 
-    <!-- Parent / Kid Note Maker Modal -->
-    <div id="import-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-        <div class="bg-white border-4 border-sky-300 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl my-8 animate-pop">
-            <div class="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-5">
-                <div class="flex items-center gap-3">
-                    <span class="text-3xl">📸</span>
-                    <div>
-                        <span class="text-xs font-extrabold uppercase tracking-wider text-brand-blue">Photo & Note Scanner</span>
-                        <h2 class="font-display text-2xl font-bold text-slate-800">Snap a Photo or Add Study Facts</h2>
-                    </div>
-                </div>
-                    <button type="button" onclick="closeImportModal()" class="p-2.5 rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition" aria-label="Close">
-                    <i data-lucide="x" class="w-6 h-6"></i>
-                </button>
-            </div>
+  <script>
+    // Your Cloudflare Worker Gemini Vision Endpoint
+    const GEMINI_WORKER_URL = "https://recallkids-ai.rnassarc.workers.dev/";
 
-            <!-- Mode Switcher: Snap a Photo vs Type Notes -->
-            <div class="grid grid-cols-2 gap-2.5 p-1.5 rounded-2xl bg-sunny-soft border-2 border-amber-200 mb-5">
-                <button type="button" id="import-tab-photo" onclick="switchImportMode('photo')" class="py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base bg-brand-blue text-white shadow-xs flex items-center justify-center gap-2 transition">
-                    <span>📸</span>
-                    <span>Snap a Photo</span>
-                </button>
-                <button type="button" id="import-tab-text" onclick="switchImportMode('text')" class="py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base text-slate-700 hover:bg-amber-100 flex items-center justify-center gap-2 transition">
-                    <span>⌨️</span>
-                    <span>Type Notes</span>
-                </button>
-            </div>
+    const STARTER_DECKS = [
+      {
+        id: "space",
+        emoji: "🚀",
+        title: "Amazing Space & Planets",
+        facts: [
+          { text: "The Sun is a giant star at the center of our solar system.", keyword: "star" },
+          { text: "Mars is called the Red Planet because its soil has rusty iron.", keyword: "Red Planet" },
+          { text: "Saturn is famous for its bright rings made of ice and rock.", keyword: "rings" },
+          { text: "Earth is the only known planet with liquid oceans and life.", keyword: "Earth" }
+        ],
+        questions: [
+          {
+            type: "mcq",
+            prompt: "What is at the center of our solar system?",
+            options: ["The Sun", "The Moon", "Mars"],
+            answer: "The Sun",
+            explanation: "The Sun is a giant star that warms all the planets!"
+          },
+          {
+            type: "mcq",
+            prompt: "Why is Mars called the Red Planet?",
+            options: ["It is covered in red lava", "Its soil has rusty iron", "It is made of strawberries"],
+            answer: "Its soil has rusty iron",
+            explanation: "Rusty iron dust gives Mars its reddish color!"
+          },
+          {
+            type: "tf",
+            prompt: "True or False: Saturn has bright rings made of ice and rock.",
+            options: ["True", "False"],
+            answer: "True",
+            explanation: "Yes! Saturn's sparkling rings are made of billions of pieces of ice and rock."
+          }
+        ]
+      },
+      {
+        id: "animals",
+        emoji: "🦁",
+        title: "Animal Superpowers",
+        facts: [
+          { text: "Chameleons can move their two eyes in different directions at once.", keyword: "eyes" },
+          { text: "Sea otters hold hands while sleeping so they do not float apart.", keyword: "hands" },
+          { text: "A group of flamingos is called a flamboyance.", keyword: "flamboyance" },
+          { text: "Owls can turn their heads almost all the way around to look behind them.", keyword: "heads" }
+        ],
+        questions: [
+          {
+            type: "mcq",
+            prompt: "Why do sea otters hold hands while sleeping?",
+            options: ["To stay warm", "So they do not float apart", "To play a game"],
+            answer: "So they do not float apart",
+            explanation: "Holding paws keeps sea otters together in the ocean waves!"
+          },
+          {
+            type: "tf",
+            prompt: "True or False: Chameleons can look in two directions at the same time.",
+            options: ["True", "False"],
+            answer: "True",
+            explanation: "Each chameleon eye moves independently!"
+          }
+        ]
+      }
+    ];
 
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-extrabold text-slate-700 mb-1.5">Topic Name (Optional for a brand new topic)</label>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <input id="new-deck-emoji" type="text" maxlength="4" placeholder="Emoji (e.g. 🦋)" class="px-4 py-3 text-base font-bold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-blue">
-                        <input id="new-deck-title" type="text" placeholder="New Topic Title (or auto-detect from photo)" class="sm:col-span-2 px-4 py-3 text-base font-semibold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-blue">
-                    </div>
-                </div>
+    const STORAGE_KEY = "recallkids_studio_v3";
+    let state = loadState();
+    let activeTab = "read";
+    let peekMode = false;
+    let revealedWords = {};
+    let scanCancelled = false;
+    let quizSession = { index: 0, score: 0, answered: false, selectedOption: null };
 
-                <!-- PHOTO UPLOAD / CAMERA SECTION -->
-                <div id="import-photo-section" class="space-y-3">
-                    <div class="flex items-center justify-between">
-                        <label class="block text-sm font-extrabold text-slate-700">Take a picture or pick a photo of your study page:</label>
-                        <button type="button" onclick="loadSampleWorksheetPhoto()" class="text-sm font-extrabold text-brand-blue hover:underline">Try Sample Worksheet ✨</button>
-                    </div>
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.decks) && parsed.decks.length > 0) {
+            return {
+              decks: parsed.decks,
+              activeDeckId: parsed.activeDeckId || parsed.decks[0].id,
+              stars: Number(parsed.stars) || 0,
+              soundOn: parsed.soundOn !== false,
+              autoRead: parsed.autoRead !== false
+            };
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load saved state", e);
+      }
+      return {
+        decks: JSON.parse(JSON.stringify(STARTER_DECKS)),
+        activeDeckId: STARTER_DECKS[0].id,
+        stars: 0,
+        soundOn: true,
+        autoRead: true
+      };
+    }
 
-                    <input id="photo-file-input" type="file" accept="image/*" capture="environment" onchange="handlePhotoFileSelected(event)" class="sr-only">
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.warn("Storage limit reached", e);
+      }
+    }
 
-                    <label for="photo-file-input" id="photo-dropzone" class="block cursor-pointer rounded-3xl border-4 border-dashed border-sky-300 bg-sky-50/70 hover:bg-sky-100/80 transition p-6 text-center space-y-2.5">
-                        <div class="w-16 h-16 rounded-2xl bg-white border-2 border-sky-200 text-3xl flex items-center justify-center mx-auto shadow-xs">
-                            📷
-                        </div>
-                        <p class="font-display text-lg font-bold text-slate-800">Tap to Take a Photo or Choose Picture</p>
-                        <p class="text-xs sm:text-sm font-bold text-slate-500">Works with homework sheets, book pages, or flashcards!</p>
-                    </label>
+    function getActiveDeck() {
+      return state.decks.find(d => d.id === state.activeDeckId) || state.decks[0];
+    }
 
-                    <!-- Photo Preview Box -->
-                    <div id="photo-preview-container" class="hidden relative rounded-3xl border-4 border-amber-300 bg-sunny-soft p-3 text-center">
-                        <img id="photo-preview-img" alt="Study page preview" class="max-h-56 mx-auto rounded-2xl object-contain shadow-xs">
-                        <div class="mt-2.5 flex items-center justify-center gap-3">
-                            <span id="photo-file-label" class="text-xs font-extrabold text-slate-600 truncate max-w-[200px]">study-page.jpg</span>
-                            <button type="button" onclick="clearSelectedPhoto()" class="text-xs font-extrabold text-rose-600 hover:underline">Change Photo</button>
-                        </div>
-                    </div>
-                </div>
+    // Gentle Sound Effects
+    function playTone(type) {
+      if (!state.soundOn) return;
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-                <!-- TEXT PASTE SECTION -->
-                <div id="import-text-section" class="hidden">
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label class="block text-sm font-extrabold text-slate-700">Type or paste simple sentences from school notes:</label>
-                        <button type="button" onclick="fillSamplePaste()" class="text-sm font-extrabold text-brand-blue hover:underline">Try Dinosaur Example ✨</button>
-                    </div>
-                    <textarea id="raw-study-text" rows="5" placeholder="Example: Tyrannosaurus Rex was a giant meat-eating dinosaur with sharp teeth. Stegosaurus had bony plates along its back and spikes on its tail." class="w-full px-4 py-3 text-base font-semibold leading-relaxed rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-blue"></textarea>
-                </div>
+        const now = ctx.currentTime;
+        if (type === "star") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(523.25, now);
+          osc.frequency.setValueAtTime(659.25, now + 0.09);
+          osc.frequency.setValueAtTime(783.99, now + 0.18);
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+          osc.start(now);
+          osc.stop(now + 0.42);
+        } else if (type === "oops") {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.setValueAtTime(260, now + 0.12);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc.start(now);
+          osc.stop(now + 0.3);
+        } else {
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(440, now);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          osc.start(now);
+          osc.stop(now + 0.14);
+        }
+      } catch (e) {}
+    }
 
-                <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                        <input id="auto-generate-on-import" type="checkbox" checked class="w-5 h-5 accent-[#FF7A2F] rounded">
-                        <span class="text-sm font-bold text-slate-700">Automatically make quiz questions too!</span>
-                    </label>
-                    <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-                        <button type="button" onclick="closeImportModal()" class="btn-bounce px-5 py-3 text-base font-bold rounded-2xl border-2 border-slate-200 text-slate-600 hover:bg-slate-50">Cancel</button>
-                        <button type="button" id="btn-process-import" onclick="handleImportSubmit()" class="btn-bounce px-6 py-3 text-base font-bold rounded-2xl bg-brand-orange text-white shadow-tactile-orange hover:bg-brand-orangeDark flex items-center gap-2">
-                            <span id="btn-process-import-label">Read Photo & Make Quiz</span>
-                            <span>🚀</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    function speakText(text) {
+      if (!("speechSynthesis" in window) || !text) return;
+      try {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.rate = 0.94;
+        utter.pitch = 1.08;
+        window.speechSynthesis.speak(utter);
+      } catch (e) {}
+    }
 
-    <!-- Add / Edit My Own Question Modal -->
-    <div id="question-modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 overflow-y-auto">
-        <div class="bg-white border-4 border-purple-300 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl my-8 animate-pop">
-            <div class="flex items-center justify-between border-b-2 border-slate-100 pb-4 mb-5">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-2xl">✏️</span>
-                    <h2 id="question-modal-title" class="font-display text-2xl font-bold text-slate-800">Add My Own Question</h2>
-                </div>
-                <button onclick="closeQuestionModal()" class="p-2 rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200">
-                    <i data-lucide="x" class="w-5 h-5"></i>
-                </button>
-            </div>
-            <form id="question-form" onsubmit="saveQuestionForm(event)" class="space-y-4">
-                <input type="hidden" id="q-edit-id">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1">Question Style</label>
-                        <select id="q-type" onchange="toggleQuestionTypeFields()" class="w-full px-3.5 py-2.5 text-base font-bold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-purple">
-                            <option value="mcq">Pick the Right Choice (3 Options)</option>
-                            <option value="cloze">Fill-in-the-Word</option>
-                            <option value="tf">True or False</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1">Matching Fact Card</label>
-                        <select id="q-fact-id" class="w-full px-3.5 py-2.5 text-base font-bold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-purple"></select>
-                    </div>
-                </div>
+    function toggleSound() {
+      state.soundOn = !state.soundOn;
+      saveState();
+      updateHeaderButtons();
+      if (state.soundOn) playTone("tap");
+    }
 
-                <div>
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1">Your Question</label>
-                    <textarea id="q-prompt" required rows="2" placeholder="Write your question here (use [___] for a missing word)..." class="w-full px-4 py-3 text-base font-semibold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-purple"></textarea>
-                </div>
+    function toggleAutoReadAloud() {
+      state.autoRead = !state.autoRead;
+      saveState();
+      updateHeaderButtons();
+      playTone("tap");
+    }
 
-                <!-- 3 Kid-Friendly Options -->
-                <div id="mcq-options-container" class="space-y-2.5">
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Choices (Tap the circle next to the right answer!)</label>
-                    <div class="flex items-center gap-2.5">
-                        <input type="radio" name="correct-opt" value="0" checked class="w-5 h-5 accent-[#10B981]">
-                        <input id="q-opt-0" type="text" placeholder="Choice 1" class="w-full px-3.5 py-2.5 text-base font-semibold rounded-xl bg-sunny-soft border-2 border-amber-200">
-                    </div>
-                    <div class="flex items-center gap-2.5">
-                        <input type="radio" name="correct-opt" value="1" class="w-5 h-5 accent-[#10B981]">
-                        <input id="q-opt-1" type="text" placeholder="Choice 2" class="w-full px-3.5 py-2.5 text-base font-semibold rounded-xl bg-sunny-soft border-2 border-amber-200">
-                    </div>
-                    <div class="flex items-center gap-2.5">
-                        <input type="radio" name="correct-opt" value="2" class="w-5 h-5 accent-[#10B981]">
-                        <input id="q-opt-2" type="text" placeholder="Choice 3" class="w-full px-3.5 py-2.5 text-base font-semibold rounded-xl bg-sunny-soft border-2 border-amber-200">
-                    </div>
-                </div>
+    function updateHeaderButtons() {
+      document.getElementById("starCount").textContent = state.stars;
+      document.getElementById("soundBtn").textContent = state.soundOn ? "🎵 Sounds: ON" : "🔇 Sounds: OFF";
+      document.getElementById("autoReadBtn").textContent = state.autoRead ? "🔊 Auto-Read: ON" : "🔈 Auto-Read: OFF";
+    }
 
-                <!-- True / False Selector -->
-                <div id="tf-options-container" class="hidden space-y-2">
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600">Is this statement True or False?</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <label class="flex items-center justify-center gap-2 p-3 rounded-2xl border-2 border-emerald-200 bg-emerald-50 font-bold cursor-pointer">
-                            <input type="radio" name="tf-answer" value="True" checked class="w-5 h-5 accent-[#10B981]">
-                            <span>✅ True</span>
-                        </label>
-                        <label class="flex items-center justify-center gap-2 p-3 rounded-2xl border-2 border-rose-200 bg-rose-50 font-bold cursor-pointer">
-                            <input type="radio" name="tf-answer" value="False" class="w-5 h-5 accent-[#EC4899]">
-                            <span>❌ False</span>
-                        </label>
-                    </div>
-                </div>
+    function switchTab(tabName) {
+      activeTab = tabName;
+      playTone("tap");
+      document.querySelectorAll(".nav-tab").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === tabName);
+      });
+      ["read", "quiz", "make", "badges"].forEach(name => {
+        document.getElementById("tab-" + name).classList.toggle("hidden", name !== tabName);
+      });
 
-                <!-- Fill-in-the-Word Answer -->
-                <div id="direct-answer-container" class="hidden">
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1">Missing Word Answer</label>
-                    <input id="q-answer" type="text" placeholder="Type the exact missing word..." class="w-full px-4 py-3 text-base font-bold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-purple">
-                </div>
+      if (tabName === "read") renderFacts();
+      if (tabName === "quiz") renderQuiz();
+      if (tabName === "badges") renderBadges();
+    }
 
-                <div>
-                    <label class="block text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-1">Helpful Hint or Why It Is Right</label>
-                    <input id="q-explanation" type="text" placeholder="Short, friendly tip to help remember..." class="w-full px-4 py-2.5 text-base font-semibold rounded-2xl bg-sunny-soft border-2 border-amber-200 focus:outline-none focus:border-brand-purple">
-                </div>
+    function renderDeckStrip() {
+      const strip = document.getElementById("deckStrip");
+      strip.innerHTML = state.decks.map(deck => `
+        <button type="button" class="deck-chip ${deck.id === state.activeDeckId ? "active" : ""}" onclick="selectDeck('${deck.id}')">
+          <span>${deck.emoji || "📘"}</span>
+          <span>${escapeHtml(deck.title)}</span>
+        </button>
+      `).join("");
+    }
 
-                <div class="flex justify-end gap-3 pt-2">
-                    <button type="button" onclick="closeQuestionModal()" class="btn-bounce px-5 py-2.5 text-base font-bold rounded-2xl border-2 border-slate-200 text-slate-600">Cancel</button>
-                    <button type="submit" class="btn-bounce px-6 py-2.5 text-base font-bold rounded-2xl bg-brand-purple text-white shadow-tactile-purple">Save Question ⭐</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    function selectDeck(deckId) {
+      state.activeDeckId = deckId;
+      revealedWords = {};
+      quizSession = { index: 0, score: 0, answered: false, selectedOption: null };
+      saveState();
+      playTone("tap");
+      renderDeckStrip();
+      renderFacts();
+      if (activeTab === "quiz") renderQuiz();
+      if (activeTab === "badges") renderBadges();
+    }
 
-    <!-- Top Kid-Friendly Header with Star Collector -->
-    <header class="no-print sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b-4 border-amber-200">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-            <!-- Brand & Topic Selector -->
-            <div class="flex items-center gap-3 min-w-0">
-                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-orange to-amber-400 text-white flex items-center justify-center text-2xl shadow-tactile shrink-0">
-                    🌟
-                </div>
-                <div class="min-w-0">
-                    <span class="font-display font-bold text-lg sm:text-xl text-slate-800 tracking-tight block leading-none">RecallKids Studio</span>
-                    <span class="text-xs font-bold text-slate-500 hidden sm:inline">Read, Remember & Shine!</span>
-                </div>
+    function renderFacts() {
+      const deck = getActiveDeck();
+      document.getElementById("activeDeckHeading").textContent = `${deck.emoji || "📘"} ${deck.title}`;
 
-                <!-- Topic Switcher Pill -->
-                <div class="flex items-center gap-1.5 ml-1 sm:ml-3">
-                    <select id="deck-selector" onchange="switchDeck(this.value)" aria-label="Choose Study Topic" class="max-w-[155px] sm:max-w-[230px] truncate text-sm sm:text-base font-extrabold text-slate-800 bg-sunny-soft border-2 border-amber-300 rounded-2xl px-3.5 py-2 focus:outline-none focus:border-brand-orange cursor-pointer">
-                    </select>
-                    <label for="instant-photo-input" title="Take a Photo to Make a Quiz!" class="cursor-pointer btn-bounce px-3.5 py-2.5 rounded-2xl bg-brand-orange text-white shadow-tactile-orange hover:bg-brand-orangeDark shrink-0 flex items-center gap-1.5 font-extrabold text-xs sm:text-sm" aria-label="Take Photo for Quiz">
-                        <span>📸</span>
-                        <span class="hidden md:inline">Photo Quiz</span>
-                    </label>
-                </div>
-            </div>
+      const photoBanner = document.getElementById("deckPhotoBanner");
+      const photoThumb = document.getElementById("deckPhotoThumb");
+      if (deck.photoDataUrl) {
+        photoThumb.src = deck.photoDataUrl;
+        photoBanner.classList.remove("hidden");
+      } else {
+        photoBanner.classList.add("hidden");
+      }
 
-            <!-- Right Star Meter, Parent Settings & Audio Toggle -->
-            <div class="flex items-center gap-2.5 shrink-0">
-                <!-- Star Collector Pill -->
-                <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-amber-100 border-2 border-amber-300 shadow-xs" title="Total Stars Earned">
-                    <span class="text-lg">⭐</span>
-                    <span id="header-stars-count" class="font-display font-bold text-base sm:text-lg text-amber-800">0</span>
-                    <div class="hidden md:block w-20 h-2.5 rounded-full bg-amber-200 overflow-hidden ml-1">
-                        <div id="header-star-bar" class="h-full bg-brand-orange transition-all duration-500" style="width: 20%"></div>
-                    </div>
-                </div>
-
-                <!-- Sound Effects Mute/Unmute Toggle -->
-                <button type="button" onclick="toggleSound()" id="btn-sound-toggle" title="Toggle Sound Effects" class="btn-bounce p-2.5 rounded-2xl bg-sunny-soft border-2 border-amber-200 text-slate-700 hover:border-brand-orange" aria-label="Toggle Sound">
-                    <i id="sound-icon" data-lucide="volume-2" class="w-5 h-5 text-brand-orange"></i>
-                </button>
-
-                <!-- Parent API Settings Button -->
-                <button type="button" onclick="openSettingsModal()" title="Parent AI Settings" class="btn-bounce p-2.5 rounded-2xl bg-sunny-soft border-2 border-amber-200 text-slate-700 hover:border-brand-blue" aria-label="Parent AI Settings">
-                    <i data-lucide="settings" class="w-5 h-5 text-brand-blue"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- 4 Big, Colorful Navigation Tabs -->
-        <nav class="max-w-6xl mx-auto px-4 sm:px-6 pb-3 flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <button type="button" onclick="setActiveTab('read')" id="tab-read" class="nav-tab btn-bounce flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm sm:text-base font-extrabold whitespace-nowrap border-2 transition">
-                <span>📖</span>
-                <span>Read & Discover</span>
-                <span id="badge-facts" class="text-xs px-2 py-0.5 rounded-full bg-black/10">0</span>
+      const list = document.getElementById("factList");
+      list.innerHTML = deck.facts.map((fact, idx) => {
+        const displayHtml = formatFactText(fact, idx);
+        return `
+          <div class="fact-card">
+            <div>${displayHtml}</div>
+            <button type="button" class="btn btn-soft" onclick="speakFact(${idx})" title="Read this fact out loud">
+              🔊 Listen
             </button>
+          </div>
+        `;
+      }).join("");
+    }
 
-            <button type="button" onclick="setActiveTab('questions')" id="tab-questions" class="nav-tab btn-bounce flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm sm:text-base font-extrabold whitespace-nowrap border-2 transition">
-                <span>🪄</span>
-                <span>Make Quiz Questions</span>
-                <span id="badge-questions" class="text-xs px-2 py-0.5 rounded-full bg-black/10">0</span>
-            </button>
+    function formatFactText(fact, idx) {
+      const safeText = escapeHtml(fact.text);
+      if (!peekMode || !fact.keyword) return safeText;
+      const safeKey = escapeHtml(fact.keyword);
+      const regex = new RegExp(`(${escapeRegExp(safeKey)})`, "i");
+      if (!regex.test(safeText)) return safeText;
 
-            <button type="button" onclick="setActiveTab('quiz')" id="tab-quiz" class="nav-tab btn-bounce flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm sm:text-base font-extrabold whitespace-nowrap border-2 transition">
-                <span>🎯</span>
-                <span>Quiz Time!</span>
-            </button>
+      if (revealedWords[idx]) {
+        return safeText.replace(regex, `<span class="peek-revealed">$1</span>`);
+      }
+      return safeText.replace(regex, `<span class="peek-blank" onclick="revealWord(${idx})">🙈 Tap to Peek</span>`);
+    }
 
-            <button type="button" onclick="setActiveTab('analytics')" id="tab-analytics" class="nav-tab btn-bounce flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm sm:text-base font-extrabold whitespace-nowrap border-2 transition">
-                <span>🏆</span>
-                <span>My Stars & Print</span>
-            </button>
-        </nav>
-    </header>
+    function revealWord(idx) {
+      revealedWords[idx] = true;
+      playTone("star");
+      renderFacts();
+    }
 
-    <!-- Main Interactive Stage -->
-    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    function togglePeekMode() {
+      peekMode = !peekMode;
+      revealedWords = {};
+      document.getElementById("peekToggleBtn").textContent = peekMode ? "👀 Peek-a-Boo Words: ON" : "🙈 Peek-a-Boo Words: OFF";
+      playTone("tap");
+      renderFacts();
+    }
 
-        <!-- ===================================================================== -->
-        <!-- TAB 1: READ & DISCOVER (STORY & FACT READER)                          -->
-        <!-- ===================================================================== -->
-        <section id="view-read" class="space-y-6">
-            <!-- Instant One-Tap Camera Hero Card (Zero-Friction Photo -> Quiz) -->
-            <div class="bg-gradient-to-r from-sky-500 via-brand-blue to-indigo-500 border-4 border-sky-300 rounded-3xl p-5 sm:p-7 text-white shadow-tactile flex flex-col md:flex-row items-center justify-between gap-5">
-                <div class="flex items-center gap-4 text-center md:text-left flex-col sm:flex-row">
-                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-white/20 backdrop-blur-xs border-2 border-white/40 flex items-center justify-center text-4xl sm:text-5xl shrink-0">
-                        📸
-                    </div>
-                    <div>
-                        <span class="inline-block text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-amber-300 text-slate-900 mb-1.5">
-                            1-Tap Magic Camera
-                        </span>
-                        <h2 class="font-display text-2xl sm:text-3xl font-bold leading-tight">
-                            Take a Photo &amp; Get an Instant Quiz!
-                        </h2>
-                        <p class="text-sm sm:text-base font-bold text-sky-100 mt-1">
-                            Just snap a picture of your homework or book page—your quiz starts right away!
-                        </p>
-                    </div>
-                </div>
+    function speakFact(idx) {
+      const deck = getActiveDeck();
+      if (deck.facts[idx]) speakText(deck.facts[idx].text);
+    }
 
-                <div class="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
-                    <label for="instant-photo-input" class="cursor-pointer btn-bounce w-full sm:w-auto px-6 py-4 rounded-2xl bg-amber-300 hover:bg-amber-200 text-slate-900 font-display font-bold text-lg sm:text-xl shadow-tactile flex items-center justify-center gap-2.5">
-                        <span class="text-2xl">📷</span>
-                        <span>Take a Photo!</span>
-                    </label>
-                    <button type="button" onclick="runInstantSamplePhotoDemo()" class="btn-bounce w-full sm:w-auto px-4 py-3.5 rounded-2xl bg-white/15 hover:bg-white/25 border-2 border-white/40 text-white font-extrabold text-sm flex items-center justify-center gap-1.5">
-                        <span>✨</span>
-                        <span>Try Sample Photo</span>
-                    </button>
-                </div>
-            </div>
+    function readAllFactsAloud() {
+      const deck = getActiveDeck();
+      const fullText = deck.facts.map(f => f.text).join(" ... ");
+      speakText(fullText);
+    }
 
-            <!-- Topic Hero Banner -->
-            <div class="bg-white border-4 border-amber-200 rounded-3xl p-5 sm:p-7 shadow-tactile flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                <div class="flex items-start sm:items-center gap-4">
-                    <div id="deck-emoji-display" class="w-16 h-16 rounded-3xl bg-sunny-soft border-2 border-amber-300 flex items-center justify-center text-4xl shrink-0">
-                        🪐
-                    </div>
-                    <img id="deck-photo-thumb" alt="Snapped study page" class="hidden w-16 h-16 rounded-2xl border-2 border-sky-300 object-cover shrink-0 cursor-pointer" onclick="openPhotoLightbox()" title="Tap to view your snapped photo">
-                    <div>
-                        <span id="deck-subject-pill" class="inline-block text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-sky-100 text-brand-blue mb-1">SCIENCE</span>
-                        <h1 id="deck-title-display" class="font-display text-2xl sm:text-3xl font-bold text-slate-800">Amazing Space &amp; Planets</h1>
-                        <p id="deck-meta-stats" class="text-sm font-bold text-slate-500 mt-0.5">Read each fact card or tap the speaker to listen!</p>
-                    </div>
-                </div>
+    // Quiz Engine
+    function startQuizNow() {
+      quizSession = { index: 0, score: 0, answered: false, selectedOption: null };
+      switchTab("quiz");
+    }
 
-                <!-- Kid-Friendly Action Buttons -->
-                <div class="flex flex-wrap items-center gap-3">
-                    <button type="button" onclick="openImportModal('text')" class="btn-bounce px-4 py-3 rounded-2xl text-sm sm:text-base font-extrabold border-2 border-sky-300 bg-sky-50 text-brand-blue hover:bg-sky-100 flex items-center gap-2">
-                        <span>⌨️</span>
-                        <span>Type Notes</span>
-                    </button>
+    function restartQuiz() {
+      quizSession = { index: 0, score: 0, answered: false, selectedOption: null };
+      playTone("tap");
+      renderQuiz();
+    }
 
-                    <button type="button" onclick="togglePeekMode()" id="btn-peek-mode" class="btn-bounce px-4 py-3 rounded-2xl text-sm sm:text-base font-extrabold border-2 border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100 flex items-center gap-2">
-                        <span>🙈</span>
-                        <span id="peek-mode-label">Peek-a-Boo Words: OFF</span>
-                    </button>
+    function renderQuiz() {
+      const deck = getActiveDeck();
+      const stage = document.getElementById("quizStage");
+      const questions = deck.questions || [];
 
-                    <button type="button" onclick="setActiveTab('quiz'); startQuizSession('all');" class="btn-bounce px-5 py-3 rounded-2xl text-sm sm:text-base font-extrabold bg-brand-green text-white shadow-tactile-green hover:opacity-95 flex items-center gap-2">
-                        <span>🎯</span>
-                        <span>Start Quiz Now!</span>
-                    </button>
-                </div>
-            </div>
+      if (questions.length === 0) {
+        stage.innerHTML = `<p style="font-weight:800;">No questions in this topic yet! Add some facts or snap a photo.</p>`;
+        return;
+      }
 
-            <!-- Quick Single Fact Adder -->
-            <form onsubmit="addSingleFact(event)" class="bg-white border-3 border-sky-200 rounded-3xl p-4 flex flex-col sm:flex-row gap-3 shadow-xs">
-                <input id="quick-fact-input" type="text" placeholder="Type a new fun fact to remember for your test..." class="flex-1 px-4 py-3 text-base font-semibold bg-sunny-soft border-2 border-amber-200 rounded-2xl focus:outline-none focus:border-brand-blue">
-                <button type="submit" class="btn-bounce px-5 py-3 rounded-2xl text-base font-extrabold bg-brand-blue text-white shadow-tactile-blue hover:bg-brand-blueDark shrink-0">
-                    + Add Fact Card
-                </button>
-            </form>
+      if (quizSession.index >= questions.length) {
+        document.getElementById("quizProgressText").textContent = "All Done!";
+        const celebration = `Awesome job! You got ${quizSession.score} out of ${questions.length} right!`;
+        stage.innerHTML = `
+          <div style="font-size:3.5rem;">🎉⭐🏆</div>
+          <h3 class="quiz-prompt">${celebration}</h3>
+          <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sun" onclick="restartQuiz()">🔄 Play Again</button>
+            <label for="cameraPhotoInput" class="btn btn-coral">📸 Snap Another Page</label>
+          </div>
+        `;
+        if (state.autoRead) speakText(celebration);
+        return;
+      }
 
-            <!-- Big Colorful Fact Cards Grid -->
-            <div id="facts-list" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
-        </section>
+      const q = questions[quizSession.index];
+      document.getElementById("quizProgressText").textContent = `Question ${quizSession.index + 1} of ${questions.length}`;
+      const options = q.options && q.options.length ? q.options : ["True", "False"];
 
-        <!-- ===================================================================== -->
-        <!-- TAB 2: MAKE QUIZ QUESTIONS                                            -->
-        <!-- ===================================================================== -->
-        <section id="view-questions" class="hidden space-y-6">
-            <div class="bg-white border-4 border-purple-200 rounded-3xl p-5 sm:p-7 shadow-tactile flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-brand-purple">Question Workshop</span>
-                    <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-800 mt-0.5">Your Practice Questions</h2>
-                    <p class="text-sm sm:text-base font-semibold text-slate-500 mt-1">Make questions automatically from your facts or write your own!</p>
-                </div>
-                <div class="flex flex-wrap items-center gap-3">
-                    <button onclick="openQuestionModal()" class="btn-bounce px-5 py-3 rounded-2xl text-sm sm:text-base font-extrabold bg-brand-purple text-white shadow-tactile-purple flex items-center gap-2">
-                        <span>✏️</span>
-                        <span>Add My Own Question</span>
-                    </button>
-                    <button onclick="generateQuestionsWithMagic()" id="btn-magic-2" class="btn-bounce px-5 py-3 rounded-2xl text-sm sm:text-base font-extrabold bg-brand-orange text-white shadow-tactile-orange hover:bg-brand-orangeDark flex items-center gap-2">
-                        <span>🪄</span>
-                        <span>Magic Question Maker</span>
-                    </button>
-                </div>
-            </div>
-
-            <div id="questions-list" class="grid grid-cols-1 md:grid-cols-2 gap-5"></div>
-        </section>
-
-        <!-- ===================================================================== -->
-        <!-- TAB 3: QUIZ TIME! (GAME-STYLE PRACTICE TEST)                          -->
-        <!-- ===================================================================== -->
-        <section id="view-quiz" class="hidden max-w-3xl mx-auto space-y-6">
-            <!-- Quiz Start Card -->
-            <div id="quiz-setup-panel" class="bg-white border-4 border-emerald-200 rounded-3xl p-6 sm:p-10 text-center shadow-tactile space-y-6">
-                <div class="w-20 h-20 rounded-3xl bg-emerald-100 text-4xl flex items-center justify-center mx-auto border-2 border-emerald-300">
-                    🎯
-                </div>
-                <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-brand-green">Test Practice Game</span>
-                    <h2 class="font-display text-3xl sm:text-4xl font-bold text-slate-800 mt-1">Ready for Quiz Time?</h2>
-                    <p id="quiz-ready-subtitle" class="text-base sm:text-lg font-semibold text-slate-600 mt-2 max-w-lg mx-auto">
-                        Answer each question to earn shiny stars and master every fact before test day!
-                    </p>
-                </div>
-
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                    <button onclick="startQuizSession('all')" class="btn-bounce w-full sm:w-auto px-8 py-4 rounded-2xl bg-brand-green text-white font-display font-bold text-xl shadow-tactile-green hover:opacity-95 flex items-center justify-center gap-2.5">
-                        <span>🚀</span>
-                        <span>Start Full Quiz</span>
-                    </button>
-                    <button onclick="startQuizSession('practice')" class="btn-bounce w-full sm:w-auto px-6 py-4 rounded-2xl bg-sunny-soft border-2 border-amber-300 text-slate-800 font-bold text-base hover:bg-amber-100 flex items-center justify-center gap-2">
-                        <span>🔄</span>
-                        <span>Practice Tricky Ones</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Active Question Card -->
-            <div id="quiz-active-panel" class="hidden space-y-5">
-                <!-- Fun Progress Bar + Auto-Read Aloud Toggle -->
-                <div class="bg-white border-3 border-amber-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-                    <span id="quiz-progress-text" class="font-display font-bold text-base text-slate-700 whitespace-nowrap">Question 1 of 5</span>
-                    <div class="flex-1 min-w-[120px] h-4 rounded-full bg-amber-100 overflow-hidden border border-amber-200">
-                        <div id="quiz-progress-bar" class="h-full bg-gradient-to-r from-brand-orange to-amber-400 transition-all duration-300 rounded-full" style="width: 20%"></div>
-                    </div>
-                    <button onclick="toggleAutoReadAloud()" id="btn-auto-read" class="btn-bounce px-3 py-1.5 rounded-xl text-xs sm:text-sm font-extrabold border-2 border-amber-300 bg-amber-50 text-amber-900 flex items-center gap-1.5">
-                        <span>🗣️</span>
-                        <span id="auto-read-label">Auto-Read: ON</span>
-                    </button>
-                    <button onclick="endQuizEarly()" class="text-sm font-extrabold text-slate-400 hover:text-brand-orange px-2">Quit</button>
-                </div>
-
-                <!-- Main Question Stage -->
-                <div class="bg-white border-4 border-sky-200 rounded-3xl p-6 sm:p-8 shadow-tactile space-y-6">
-                    <div class="flex items-center justify-between gap-3">
-                        <span id="active-q-type-badge" class="text-xs font-extrabold uppercase tracking-wider px-3.5 py-1.5 rounded-full bg-sky-100 text-brand-blue">PICK THE RIGHT CHOICE</span>
-                        <button onclick="speakCurrentQuestion()" class="btn-bounce px-4 py-2 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-900 font-extrabold text-sm flex items-center gap-2 hover:bg-amber-200">
-                            <span>🔊</span>
-                            <span>Read Aloud</span>
-                        </button>
-                    </div>
-
-                    <h3 id="active-q-prompt" class="font-display text-2xl sm:text-3xl font-bold text-slate-800 leading-snug">
-                        Question goes here?
-                    </h3>
-
-                    <!-- Big Tap Choice Buttons (MCQ / True-False) -->
-                    <div id="active-q-choices" class="space-y-3"></div>
-
-                    <!-- Fill-in-the-Word Input -->
-                    <div id="active-q-text-wrap" class="hidden space-y-3">
-                        <input id="active-q-text-input" type="text" autocomplete="off" placeholder="Type the missing word here..." class="w-full px-5 py-4 text-lg font-bold rounded-2xl bg-sunny-soft border-3 border-amber-300 focus:outline-none focus:border-brand-blue">
-                        <button id="btn-submit-text-answer" onclick="submitTextAnswer()" class="btn-bounce px-6 py-3.5 rounded-2xl bg-brand-blue text-white font-display font-bold text-lg shadow-tactile-blue">
-                            Check My Answer! ✨
-                        </button>
-                    </div>
-
-                    <!-- Encouraging Feedback & Fact Check Card -->
-                    <div id="active-q-feedback" class="hidden pt-4 border-t-2 border-slate-100 space-y-4 animate-pop">
-                        <div id="feedback-banner" class="p-5 rounded-2xl border-3 flex items-start gap-3.5">
-                            <span id="feedback-emoji" class="text-3xl shrink-0">🌟</span>
-                            <div class="space-y-1">
-                                <p id="feedback-heading" class="font-display text-xl font-bold">Awesome Job! +10 Stars!</p>
-                                <p id="feedback-answer-reveal" class="text-sm font-extrabold"></p>
-                                <p id="feedback-explanation" class="text-base font-semibold text-slate-700 pt-1"></p>
-                            </div>
-                        </div>
-
-                        <!-- Let's Check the Fact Card! -->
-                        <div class="p-4 rounded-2xl bg-sunny-soft border-2 border-amber-200 flex items-start justify-between gap-3">
-                            <div>
-                                <span class="block text-xs font-extrabold uppercase tracking-wider text-amber-700 mb-1">📖 Fact Card Check</span>
-                                <p id="feedback-source-fact" class="text-base font-bold text-slate-800"></p>
-                            </div>
-                            <button onclick="speakText(document.getElementById('feedback-source-fact').textContent)" class="p-2.5 rounded-xl bg-white border-2 border-amber-200 text-amber-700 hover:bg-amber-100 shrink-0" title="Listen to Fact">
-                                🔊
-                            </button>
-                        </div>
-
-                        <div class="flex justify-end pt-1">
-                            <button onclick="nextQuizQuestion()" class="btn-bounce px-7 py-3.5 rounded-2xl bg-brand-orange text-white font-display font-bold text-lg shadow-tactile-orange hover:bg-brand-orangeDark flex items-center gap-2">
-                                <span>Next Question</span>
-                                <span>➡️</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- End-of-Quiz Trophy & Review Summary -->
-            <div id="quiz-summary-panel" class="hidden bg-white border-4 border-amber-300 rounded-3xl p-6 sm:p-10 text-center shadow-tactile space-y-6 animate-pop">
-                <div class="text-6xl">🏆</div>
-                <div>
-                    <span class="text-xs font-extrabold uppercase tracking-wider text-brand-orange">Quiz Complete!</span>
-                    <h2 id="summary-headline" class="font-display text-3xl sm:text-4xl font-bold text-slate-800 mt-1">You Did Great!</h2>
-                </div>
-
-                <div class="grid grid-cols-3 gap-3 max-w-md mx-auto">
-                    <div class="p-4 rounded-2xl bg-amber-50 border-2 border-amber-200">
-                        <span id="summary-stars-earned" class="block font-display text-2xl sm:text-3xl font-bold text-amber-600">+0 ⭐</span>
-                        <span class="text-xs font-extrabold text-slate-500">STARS WON</span>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-200">
-                        <span id="summary-score" class="block font-display text-2xl sm:text-3xl font-bold text-emerald-600">0/0</span>
-                        <span class="text-xs font-extrabold text-slate-500">CORRECT</span>
-                    </div>
-                    <div class="p-4 rounded-2xl bg-sky-50 border-2 border-sky-200">
-                        <span id="summary-mastered-count" class="block font-display text-2xl sm:text-3xl font-bold text-brand-blue">0</span>
-                        <span class="text-xs font-extrabold text-slate-500">MASTERED</span>
-                    </div>
-                </div>
-
-                <!-- Mastered vs Practice Again Breakdown -->
-                <div id="summary-fact-review" class="text-left max-w-xl mx-auto space-y-2.5 pt-2"></div>
-
-                <div class="flex flex-wrap justify-center gap-3 pt-3">
-                    <button onclick="resetQuizToSetup()" class="btn-bounce px-6 py-3.5 rounded-2xl bg-brand-green text-white font-display font-bold text-lg shadow-tactile-green">
-                        Play Again! 🔄
-                    </button>
-                    <button onclick="setActiveTab('analytics')" class="btn-bounce px-6 py-3.5 rounded-2xl bg-sunny-soft border-2 border-amber-300 text-slate-800 font-bold text-base">
-                        See My Badges 🏆
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- ===================================================================== -->
-        <!-- TAB 4: MY STARS, BADGE SHELF & PRINTABLE STUDY SHEET                  -->
-        <!-- ===================================================================== -->
-        <section id="view-analytics" class="hidden space-y-6">
-            <!-- Top Sticker & Badge Shelf -->
-            <div class="bg-white border-4 border-amber-200 rounded-3xl p-6 sm:p-8 shadow-tactile">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b-2 border-slate-100 pb-4 mb-6">
-                    <div>
-                        <span class="text-xs font-extrabold uppercase tracking-wider text-brand-orange">Sticker & Trophy Shelf</span>
-                        <h2 class="font-display text-2xl sm:text-3xl font-bold text-slate-800 mt-0.5">Your Awesome Badges</h2>
-                    </div>
-                    <button onclick="window.print()" class="btn-bounce px-5 py-3 rounded-2xl bg-brand-blue text-white font-extrabold text-sm sm:text-base shadow-tactile-blue hover:bg-brand-blueDark flex items-center gap-2 self-start sm:self-auto">
-                        <span>🖨️</span>
-                        <span>Print Practice Sheet</span>
-                    </button>
-                </div>
-
-                <div id="badge-shelf" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
-            </div>
-
-            <!-- Topic Mastery Meter & Fact Status -->
-            <div class="bg-white border-4 border-sky-200 rounded-3xl p-6 sm:p-8 shadow-tactile space-y-5">
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <h3 class="font-display text-2xl font-bold text-slate-800">Fact Mastery Checkup</h3>
-                        <p class="text-sm font-semibold text-slate-500">Green stars mean you know it well. Orange stars mean let's practice again!</p>
-                    </div>
-                    <button onclick="resetDeckProgress()" class="px-4 py-2 rounded-xl text-xs font-extrabold border-2 border-slate-200 text-slate-500 hover:border-rose-400 hover:text-rose-600 transition self-start sm:self-auto">
-                        Reset Topic Stars
-                    </button>
-                </div>
-
-                <div id="analytics-facts-breakdown" class="space-y-3"></div>
-            </div>
-        </section>
-
-    </main>
-
-    <!-- Print-Only Kid-Friendly Worksheet -->
-    <div id="print-sheet" class="hidden print-only p-8 max-w-4xl mx-auto"></div>
-
-    <script>
-        // =========================================================================
-        // 1. DEFAULT KID-FRIENDLY DECKS, STATE & PERSISTENCE
-        // =========================================================================
-        const STORAGE_KEY = 'recallkids_studio_state_v2';
-
-        const DEFAULT_DECKS = [
-            {
-                id: 'deck-space',
-                emoji: '🪐',
-                title: 'Amazing Space & Planets',
-                subject: 'Science',
-                color: 'sky',
-                facts: [
-                    { id: 'f-sp-1', text: 'The Sun is a giant ball of hot glowing gas at the center of our solar system.', keywords: ['Sun', 'solar system'], mastered: false },
-                    { id: 'f-sp-2', text: 'Jupiter is the biggest planet in our solar system and has a giant storm called the Great Red Spot.', keywords: ['Jupiter', 'Great Red Spot'], mastered: false },
-                    { id: 'f-sp-3', text: 'Saturn is famous for its bright, sparkly rings made of ice and rock.', keywords: ['Saturn', 'rings', 'ice'], mastered: false },
-                    { id: 'f-sp-4', text: 'Earth is the only planet known to have liquid water on its surface and living things.', keywords: ['Earth', 'liquid water'], mastered: false }
-                ],
-                questions: [
-                    { id: 'q-sp-1', factId: 'f-sp-1', type: 'mcq', prompt: 'What is at the center of our solar system?', options: ['The Sun', 'The Moon', 'Mars'], answer: 'The Sun', explanation: 'The Sun is our giant star in the middle of the solar system!' },
-                    { id: 'q-sp-2', factId: 'f-sp-2', type: 'cloze', prompt: 'Fill in the missing word: [___] is the biggest planet in our solar system.', options: [], answer: 'Jupiter', explanation: 'Jupiter is so huge that over 1,300 Earths could fit inside it!' },
-                    { id: 'q-sp-3', factId: 'f-sp-3', type: 'tf', prompt: 'True or False: Saturn has bright rings made of ice and rock.', options: ['True', 'False'], answer: 'True', explanation: 'Yes! Saturn wears gorgeous rings made of billions of ice and rock pieces.' },
-                    { id: 'q-sp-4', factId: 'f-sp-4', type: 'mcq', prompt: 'Which planet is known to have living things and liquid water on its surface?', options: ['Earth', 'Mercury', 'Neptune'], answer: 'Earth', explanation: 'Earth is our home planet!' }
-                ]
-            },
-            {
-                id: 'deck-animals',
-                emoji: '🦁',
-                title: 'Animal Habitats & Superpowers',
-                subject: 'Nature',
-                color: 'emerald',
-                facts: [
-                    { id: 'f-an-1', text: 'Chameleons can change the color of their skin to hide and show their mood.', keywords: ['Chameleons', 'color'], mastered: false },
-                    { id: 'f-an-2', text: 'Polar bears have thick white fur and a layer of fat called blubber to stay warm in the Arctic.', keywords: ['Polar bears', 'blubber', 'Arctic'], mastered: false },
-                    { id: 'f-an-3', text: 'Honeybees dance in a figure-eight pattern to tell other bees where to find sweet flowers.', keywords: ['Honeybees', 'flowers'], mastered: false }
-                ],
-                questions: [
-                    { id: 'q-an-1', factId: 'f-an-1', type: 'mcq', prompt: 'Which animal can change its skin color?', options: ['A chameleon', 'A penguin', 'A turtle'], answer: 'A chameleon', explanation: 'Chameleons are color-changing reptiles!' },
-                    { id: 'q-an-2', factId: 'f-an-2', type: 'cloze', prompt: 'Fill in the missing word: Polar bears have a warm layer of fat called [___].', options: [], answer: 'blubber', explanation: 'Blubber keeps polar bears cozy even in freezing snow!' },
-                    { id: 'q-an-3', factId: 'f-an-3', type: 'tf', prompt: 'True or False: Honeybees dance to show other bees where flowers are.', options: ['True', 'False'], answer: 'True', explanation: 'It is called the waggle dance!' }
-                ]
-            },
-            {
-                id: 'deck-world',
-                emoji: '🌍',
-                title: 'World Geography & Continents',
-                subject: 'World',
-                color: 'amber',
-                facts: [
-                    { id: 'f-wo-1', text: 'Earth has seven huge pieces of land called continents.', keywords: ['seven', 'continents'], mastered: false },
-                    { id: 'f-wo-2', text: 'Antarctica is the coldest and windiest continent at the bottom of the world.', keywords: ['Antarctica', 'coldest'], mastered: false },
-                    { id: 'f-wo-3', text: 'The Pacific Ocean is the largest and deepest ocean on Earth.', keywords: ['Pacific Ocean', 'largest'], mastered: false }
-                ],
-                questions: [
-                    { id: 'q-wo-1', factId: 'f-wo-1', type: 'mcq', prompt: 'How many continents does Earth have?', options: ['Seven', 'Three', 'Twelve'], answer: 'Seven', explanation: 'Earth has 7 continents!' },
-                    { id: 'q-wo-2', factId: 'f-wo-2', type: 'cloze', prompt: 'Fill in the missing word: [___] is the coldest continent on Earth.', options: [], answer: 'Antarctica', explanation: 'Penguins love living in chilly Antarctica!' },
-                    { id: 'q-wo-3', factId: 'f-wo-3', type: 'tf', prompt: 'True or False: The Pacific Ocean is the largest ocean on Earth.', options: ['True', 'False'], answer: 'True', explanation: 'Yes! The Pacific Ocean covers more than a third of our planet.' }
-                ]
+      stage.innerHTML = `
+        <button type="button" class="btn btn-soft" onclick="speakCurrentQuestion()">
+          🔊 Hear Question
+        </button>
+        <div class="quiz-prompt">${escapeHtml(q.prompt)}</div>
+        <div class="options-grid">
+          ${options.map(opt => {
+            let cls = "option-btn";
+            if (quizSession.answered) {
+              if (opt === q.answer) cls += " correct";
+              else if (opt === quizSession.selectedOption) cls += " wrong";
             }
-        ];
-
-        let appState = {
-            decks: [],
-            activeDeckId: 'deck-space',
-            activeTab: 'read',
-            peekMode: false,
-            soundEnabled: true,
-            autoReadQuiz: true,
-            apiKey: '',
-            stars: 20,
-            quizzesCompleted: 0,
-            factsCreated: 0
-        };
-// ... existing code ... -->
-        function speakText(text) {
-            try {
-                if (!('speechSynthesis' in window)) {
-                    showToast('Read-aloud is not supported in this browser.', 'error');
-                    return;
-                }
-                window.speechSynthesis.cancel();
-                const clean = String(text || '').replace(/\[___\]/g, 'blank');
-                const utter = new SpeechSynthesisUtterance(clean);
-                utter.rate = 0.92;
-                utter.pitch = 1.08;
-                window.speechSynthesis.speak(utter);
-            } catch (e) {
-                showToast('Tap once on the screen to enable voice.', 'info');
-            }
-        }
-
-        function openSettingsModal() {
-            const input = document.getElementById('parent-api-key-input');
-            if (input) input.value = appState.apiKey || '';
-            const modal = document.getElementById('settings-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-        }
-
-        function closeSettingsModal() {
-            const modal = document.getElementById('settings-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        }
-
-        function saveParentApiKey() {
-            const input = document.getElementById('parent-api-key-input');
-            appState.apiKey = input ? input.value.trim() : '';
-            saveState();
-            closeSettingsModal();
-            playTone('star');
-            showToast(appState.apiKey ? 'Parent AI Key saved on this device! 🔑' : 'Cleared AI Key (using built-in mode).', 'success');
-        }
-
-        function clearParentApiKey() {
-            const input = document.getElementById('parent-api-key-input');
-            if (input) input.value = '';
-            appState.apiKey = '';
-            saveState();
-            showToast('AI Key cleared.');
-        }
-
-        // =========================================================================
-        // 3. NAVIGATION, DECK SWITCHING & UI TELEMETRY
-        // =========================================================================
-        function setActiveTab(tab) {
-            appState.activeTab = tab;
-            ['read', 'questions', 'quiz', 'analytics'].forEach(t => {
-                const view = document.getElementById(`view-${t}`);
-                const btn = document.getElementById(`tab-${t}`);
-                if (!view || !btn) return;
-                if (t === tab) {
-                    view.classList.remove('hidden');
-                    btn.className = 'nav-tab btn-bounce flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm sm:text-base font-extrabold whitespace-nowrap border-2 bg-brand-orange text-white border-brand-orangeDark shadow-tactile-orange transition';
-                } else {
-                    view.classList.add('hidden');
-                    btn.className = 'nav-tab btn-bounce flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm sm:text-base font-extrabold whitespace-nowrap border-2 bg-sunny-soft text-slate-700 border-amber-200 hover:border-brand-orange transition';
-                }
-            });
-            if (tab === 'analytics') renderAnalytics();
-            if (tab === 'quiz' && !quizSession.active) resetQuizToSetup();
-            saveState();
-        }
-
-        function renderDeckSelector() {
-            const sel = document.getElementById('deck-selector');
-            sel.innerHTML = appState.decks.map(d =>
-                `<option value="${d.id}" ${d.id === appState.activeDeckId ? 'selected' : ''}>${d.emoji || '📘'} ${escapeHtml(d.title)}</option>`
-            ).join('');
-        }
-
-        function switchDeck(deckId) {
-            appState.activeDeckId = deckId;
-            quizSession.active = false;
-            saveState();
-            renderAllViews();
-            resetQuizToSetup();
-        }
-
-        function updateHeaderTelemetry() {
-            const deck = getActiveDeck();
-            document.getElementById('header-stars-count').textContent = appState.stars;
-            const barPct = Math.min(100, (appState.stars % 100) || (appState.stars > 0 ? 100 : 10));
-            document.getElementById('header-star-bar').style.width = `${barPct}%`;
-
-            document.getElementById('badge-facts').textContent = deck.facts.length;
-            document.getElementById('badge-questions').textContent = deck.questions.length;
-
-            const icon = document.getElementById('sound-icon');
-            if (icon) {
-                icon.setAttribute('data-lucide', appState.soundEnabled ? 'volume-2' : 'volume-x');
-                if (window.lucide) lucide.createIcons();
-            }
-            updateAutoReadLabel();
-        }
-
-        // =========================================================================
-        // 4. FACT READER & PEEK-A-BOO WORD MODE
-        // =========================================================================
-        function extractKidKeywords(sentence) {
-            const stopWords = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'has', 'have', 'from', 'that', 'this', 'with', 'they', 'been', 'into', 'very', 'called', 'their', 'which', 'about', 'there', 'these', 'those', 'where']);
-            const words = sentence.replace(/[^a-zA-Z0-9\s-]/g, '').split(/\s+/).filter(w => w.length >= 4 && !stopWords.has(w.toLowerCase()));
-            const unique = [];
-            words.forEach(w => {
-                if (!unique.some(u => u.toLowerCase() === w.toLowerCase())) unique.push(w);
-            });
-            return unique.slice(0, 2);
-        }
-
-        function togglePeekMode() {
-            appState.peekMode = !appState.peekMode;
-            const label = document.getElementById('peek-mode-label');
-            label.textContent = appState.peekMode ? 'Peek-a-Boo Words: ON' : 'Peek-a-Boo Words: OFF';
-            playTone('flip');
-            saveState();
-            renderFacts();
-        }
-
-        function formatFactWithPeekTiles(fact) {
-            let html = escapeHtml(fact.text);
-            if (!appState.peekMode || !fact.keywords || fact.keywords.length === 0) {
-                return html;
-            }
-            fact.keywords.forEach(kw => {
-                const safeKw = escapeHtml(kw);
-                const regex = new RegExp(`\\b(${safeKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})\\b`, 'i');
-                html = html.replace(regex, `<span onclick="revealPeekTile(this)" class="peek-tile peek-hidden" title="Tap to peek!">$1</span>`);
-            });
-            return html;
-        }
-
-        function revealPeekTile(el) {
-            if (el.classList.contains('peek-hidden')) {
-                el.classList.remove('peek-hidden');
-                el.classList.add('peek-revealed');
-                playTone('flip');
-            } else {
-                el.classList.add('peek-hidden');
-                el.classList.remove('peek-revealed');
-            }
-        }
-
-        function renderFacts() {
-            const deck = getActiveDeck();
-            document.getElementById('deck-emoji-display').textContent = deck.emoji || '📘';
-            document.getElementById('deck-subject-pill').textContent = (deck.subject || 'Study Topic').toUpperCase();
-            document.getElementById('deck-title-display').textContent = deck.title;
-
-            const photoThumb = document.getElementById('deck-photo-thumb');
-            if (deck.photoDataUrl) {
-                photoThumb.src = deck.photoDataUrl;
-                photoThumb.classList.remove('hidden');
-            } else {
-                photoThumb.classList.add('hidden');
-            }
-
-            const masteredCount = deck.facts.filter(f => f.mastered).length;
-            document.getElementById('deck-meta-stats').textContent =
-                `${deck.facts.length} Fact Cards · ${masteredCount} Mastered ⭐ · Tap the speaker to listen!`;
-
-            const container = document.getElementById('facts-list');
-            if (deck.facts.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full bg-white border-4 border-dashed border-amber-300 rounded-3xl p-10 text-center space-y-3">
-                        <div class="text-4xl">📸</div>
-                        <p class="font-display text-xl font-bold text-slate-700">No fact cards here yet!</p>
-                        <label for="instant-photo-input" class="inline-block cursor-pointer btn-bounce px-5 py-3 rounded-2xl bg-brand-orange text-white font-extrabold">Take a Photo to Make a Quiz!</label>
-                    </div>`;
-                return;
-            }
-
-            const cardAccents = ['border-amber-200', 'border-sky-200', 'border-emerald-200', 'border-purple-200'];
-            container.innerHTML = deck.facts.map((fact, idx) => {
-                const borderClass = cardAccents[idx % cardAccents.length];
-                return `
-                <article class="bg-white border-4 ${borderClass} rounded-3xl p-5 sm:p-6 shadow-tactile flex flex-col justify-between gap-4">
-                    <div>
-                        <div class="flex items-center justify-between gap-2 mb-3">
-                            <span class="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full ${fact.mastered ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                ${fact.mastered ? '⭐ Mastered!' : `Fact Card #${idx + 1}`}
-                            </span>
-                            <div class="flex items-center gap-1.5">
-                                <button onclick="speakText(${JSON.stringify(fact.text).replace(/"/g, '&quot;')})" title="Read Fact Aloud" class="btn-bounce px-3 py-1.5 rounded-xl bg-amber-100 border-2 border-amber-300 text-amber-900 text-xs font-extrabold flex items-center gap-1 hover:bg-amber-200">
-                                    <span>🔊</span>
-                                    <span>Listen</span>
-                                </button>
-                                <button onclick="deleteFact('${fact.id}')" title="Delete Fact" class="p-1.5 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <p class="text-lg sm:text-xl font-bold text-slate-800 leading-relaxed">
-                            ${formatFactWithPeekTiles(fact)}
-                        </p>
-                    </div>
-
-                    <div class="flex items-center justify-between pt-3 border-t-2 border-slate-100">
-                        <div class="flex flex-wrap gap-1.5">
-                            ${(fact.keywords || []).map(k => `<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-sunny-soft border border-amber-200 text-amber-800">${escapeHtml(k)}</span>`).join('')}
-                        </div>
-                        <button onclick="generateSingleFactQuestion('${fact.id}')" class="text-xs font-extrabold text-brand-orange hover:underline flex items-center gap-1 shrink-0">
-                            <span>🪄</span>
-                            <span>Make Question</span>
-                        </button>
-                    </div>
-                </article>`;
-            }).join('');
-
-            if (window.lucide) lucide.createIcons();
-        }
-
-        function addSingleFact(e) {
-            e.preventDefault();
-            const input = document.getElementById('quick-fact-input');
-            const text = input.value.trim();
-            if (!text) return;
-
-            const deck = getActiveDeck();
-            deck.facts.unshift({
-                id: 'f-' + Date.now(),
-                text,
-                keywords: extractKidKeywords(text),
-                mastered: false
-            });
-            input.value = '';
-            appState.factsCreated += 1;
-            appState.stars += 2;
-            playTone('star');
-            saveState();
-            renderAllViews();
-            showToast('New Fact Card added! +2 Stars ⭐', 'success');
-        }
-
-        function deleteFact(factId) {
-            const deck = getActiveDeck();
-            deck.facts = deck.facts.filter(f => f.id !== factId);
-            deck.questions = deck.questions.filter(q => q.factId !== factId);
-            saveState();
-            renderAllViews();
-            showToast('Fact card removed');
-        }
-
-        function openPhotoLightbox() {
-            const deck = getActiveDeck();
-            if (!deck.photoDataUrl) return;
-            openImportModal('photo');
-            document.getElementById('photo-preview-img').src = deck.photoDataUrl;
-            document.getElementById('photo-file-label').textContent = deck.title;
-            document.getElementById('photo-dropzone').classList.add('hidden');
-            document.getElementById('photo-preview-container').classList.remove('hidden');
-        }
-
-        // =========================================================================
-        // 5. ZERO-FRICTION ONE-TAP PHOTO -> INSTANT QUIZ FLOW
-        // =========================================================================
-        function triggerInstantCamera() {
-            const input = document.getElementById('instant-photo-input');
-            if (!input) return;
-            input.value = '';
-            input.click();
-        }
-
-        function handleInstantPhotoSelected(event) {
-            const file = event.target.files?.[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const img = new Image();
-                img.onload = function () {
-                    const maxDim = 1280;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w > h) {
-                            h = Math.round((h * maxDim) / w);
-                            w = maxDim;
-                        } else {
-                            w = Math.round((w * maxDim) / h);
-                            h = maxDim;
-                        }
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                    const base64 = dataUrl.split(',')[1];
-                    runInstantPhotoToQuizPipeline(base64, 'image/jpeg', dataUrl, false);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-            event.target.value = '';
-        }
-
-        function handleInstantPhotoSelected(event) {
-            const file = event.target.files?.[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const img = new Image();
-                img.onload = function () {
-                    const maxDim = 1280;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w > h) {
-                            h = Math.round((h * maxDim) / w);
-                            w = maxDim;
-                        } else {
-                            w = Math.round((w * maxDim) / h);
-                            h = maxDim;
-                        }
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                    const base64 = dataUrl.split(',')[1];
-                    runInstantPhotoToQuizPipeline(base64, 'image/jpeg', dataUrl, false);
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function runInstantSamplePhotoDemo() {
-            const canvas = document.createElement('canvas');
-            canvas.width = 760;
-            canvas.height = 480;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#FFFDF7';
-            ctx.fillRect(0, 0, 760, 480);
-            ctx.strokeStyle = '#38BDF8';
-            ctx.lineWidth = 8;
-            ctx.strokeRect(16, 16, 728, 448);
-
-            ctx.fillStyle = '#0284C7';
-            ctx.font = 'bold 30px sans-serif';
-            ctx.fillText('2nd Grade Science: Butterfly Life Cycle', 44, 72);
-
-            ctx.fillStyle = '#1E293B';
-            ctx.font = 'bold 22px sans-serif';
-            const lines = [
-                '1. A butterfly starts its life as a tiny egg laid on a green leaf.',
-                '2. A hungry caterpillar hatches from the egg and eats many leaves.',
-                '3. Next, the caterpillar forms a hard shell called a chrysalis.',
-                '4. Inside the chrysalis, it changes into a colorful adult butterfly.'
-            ];
-            lines.forEach((line, i) => {
-                ctx.fillText(line, 44, 145 + i * 72);
-            });
-
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            const base64 = dataUrl.split(',')[1];
-            runInstantPhotoToQuizPipeline(base64, 'image/jpeg', dataUrl, true);
-        }
-
-        function setScannerStep(stepNumber) {
-            const steps = [
-                { id: 'scan-step-1', label: '1. Looking at your photo...' },
-                { id: 'scan-step-2', label: '2. Finding cool facts to remember...' },
-                { id: 'scan-step-3', label: '3. Building your quiz questions!' }
-            ];
-            steps.forEach((s, idx) => {
-                const el = document.getElementById(s.id);
-                if (!el) return;
-                const current = idx + 1;
-                if (current < stepNumber) {
-                    el.className = 'flex items-center gap-3 font-extrabold text-sm sm:text-base text-emerald-600';
-                } else if (current === stepNumber) {
-                    el.className = 'flex items-center gap-3 font-extrabold text-sm sm:text-base text-brand-blue';
-                } else {
-                    el.className = 'flex items-center gap-3 font-bold text-sm sm:text-base text-slate-400';
-                }
-            });
-        }
-
-        async function runInstantPhotoToQuizPipeline(base64Data, mimeType, previewDataUrl, isSample = false) {
-            const overlay = document.getElementById('magic-scanner-overlay');
-            document.getElementById('scanner-preview-img').src = previewDataUrl;
-            setScannerStep(1);
-            overlay.classList.remove('hidden');
-            overlay.classList.add('flex');
-            playTone('flip');
-
-            const stepTimer1 = setTimeout(() => setScannerStep(2), 750);
-            const stepTimer2 = setTimeout(() => setScannerStep(3), 1550);
-
-            const systemPrompt =
-                'You are a warm, cheerful elementary school teacher helping a young child (ages 6 to 9) study directly from a photo of their homework, worksheet, book page, or checklist. ' +
-                'Read everything shown in the image and extract clear, kid-friendly study facts (1 short sentence per fact) plus a short topic title and matching emoji. ' +
-                'Also generate 1 fun quiz question per fact ("mcq" with 3 short options, "cloze" with [___] replacing 1 key word, or "tf" with options ["True", "False"]). ' +
-                'Keep questions simple and encouraging. Never use em dashes anywhere.';
-
-            const payload = {
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [
-                            { text: 'Read this study photo and immediately create a kid-friendly quiz from the facts on the page.' },
-                            {
-                                inlineData: {
-                                    mimeType,
-                                    data: base64Data
-                                }
-                            }
-                        ]
-                    }
-                ],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                    responseMimeType: 'application/json',
-                    responseSchema: {
-                        type: 'OBJECT',
-                        properties: {
-                            topicTitle: { type: 'STRING' },
-                            topicEmoji: { type: 'STRING' },
-                            facts: {
-                                type: 'ARRAY',
-                                items: {
-                                    type: 'OBJECT',
-                                    properties: {
-                                        text: { type: 'STRING' },
-                                        keywords: { type: 'ARRAY', items: { type: 'STRING' } }
-                                    },
-                                    required: ['text', 'keywords']
-                                }
-                            },
-                            questions: {
-                                type: 'ARRAY',
-                                items: {
-                                    type: 'OBJECT',
-                                    properties: {
-                                        factIndex: { type: 'INTEGER' },
-                                        type: { type: 'STRING', enum: ['mcq', 'cloze', 'tf'] },
-                                        prompt: { type: 'STRING' },
-                                        options: { type: 'ARRAY', items: { type: 'STRING' } },
-                                        answer: { type: 'STRING' },
-                                        explanation: { type: 'STRING' }
-                                    },
-                                    required: ['factIndex', 'type', 'prompt', 'options', 'answer', 'explanation']
-                                }
-                            }
-                        },
-                        required: ['topicTitle', 'topicEmoji', 'facts', 'questions']
-                    }
-                }
-            };
-            const apiKey = (appState.apiKey || '').trim();
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-            let extracted = null;
-            try {
-                if (!apiKey) throw new Error('No API key configured - using local mode');
-                const res = await fetchWithBackoff(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) throw new Error('Vision API unavailable');
-                const data = await res.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!text) throw new Error('Empty vision response');
-                extracted = JSON.parse(text);
-            } catch (err) {
-                extracted = {
-                    topicTitle: isSample ? 'Butterfly Life Cycle' : 'My Photo Quiz',
-                    topicEmoji: isSample ? '🦋' : '📸',
-                    facts: [
-                        { text: 'A butterfly starts its life as a tiny egg laid on a green leaf.', keywords: ['butterfly', 'egg', 'leaf'] },
-                        { text: 'A hungry caterpillar hatches from the egg and eats many leaves.', keywords: ['caterpillar', 'leaves'] },
-                        { text: 'Next, the caterpillar forms a hard shell called a chrysalis.', keywords: ['chrysalis', 'hard shell'] },
-                        { text: 'Inside the chrysalis, it changes into a colorful adult butterfly.', keywords: ['chrysalis', 'adult butterfly'] }
-                    ],
-                    questions: []
-                };
-            }
-
-            clearTimeout(stepTimer1);
-            clearTimeout(stepTimer2);
-            setScannerStep(3);
-
-            const cleanTopic = String(extracted.topicTitle || 'My Photo Quiz').replace(/—/g, '-').trim();
-            const finalTitle = cleanTopic.toLowerCase().includes('photo') ? cleanTopic : `My Photo Quiz: ${cleanTopic}`;
-            const finalEmoji = extracted.topicEmoji || '📸';
-
-            const newDeck = {
-                id: 'deck-' + Date.now(),
-                emoji: finalEmoji,
-                title: finalTitle,
-                subject: 'Photo Quiz',
-                color: 'sky',
-                photoDataUrl: previewDataUrl,
-                facts: [],
-                questions: []
-            };
-
-            const addedFacts = (extracted.facts || []).map((f, idx) => {
-                const cleanText = String(f.text || '').replace(/—/g, '-').trim();
-                const kws = Array.isArray(f.keywords) && f.keywords.length > 0
-                    ? f.keywords.map(k => String(k).replace(/—/g, '-'))
-                    : extractKidKeywords(cleanText);
-                return {
-                    id: 'f-' + Date.now() + '-' + idx,
-                    text: cleanText,
-                    keywords: kws,
-                    mastered: false
-                };
-            }).filter(f => f.text.length > 0);
-
-            newDeck.facts = addedFacts;
-
-            if (Array.isArray(extracted.questions) && extracted.questions.length > 0) {
-                newDeck.questions = extracted.questions.map((q, idx) => {
-                    const matchedFact = addedFacts[q.factIndex] || addedFacts[idx % addedFacts.length];
-                    let cleanOptions = Array.isArray(q.options) ? q.options.map(o => String(o).replace(/—/g, '-')) : [];
-                    if (q.type === 'mcq' && cleanOptions.length > 3) {
-                        const others = cleanOptions.filter(o => o !== q.answer).slice(0, 2);
-                        cleanOptions = [q.answer, ...others].sort(() => Math.random() - 0.5);
-                    }
-                    return {
-                        id: 'q-' + Date.now() + '-' + idx,
-                        factId: matchedFact ? matchedFact.id : '',
-                        type: ['mcq', 'cloze', 'tf'].includes(q.type) ? q.type : 'mcq',
-                        prompt: String(q.prompt || '').replace(/—/g, '-'),
-                        options: cleanOptions,
-                        answer: String(q.answer || '').replace(/—/g, '-'),
-                        explanation: String(q.explanation || (matchedFact ? matchedFact.text : '')).replace(/—/g, '-')
-                    };
-                }).filter(q => q.prompt && q.answer);
-            } else {
-                const fallbackQs = buildKidOfflineQuestions(addedFacts, addedFacts);
-                newDeck.questions = fallbackQs.map((q, idx) => ({
-                    ...q,
-                    id: 'q-' + Date.now() + '-' + idx
-                }));
-            }
-
-            appState.decks.unshift(newDeck);
-            appState.activeDeckId = newDeck.id;
-            appState.factsCreated += addedFacts.length;
-            appState.stars += addedFacts.length * 3;
-
-            await new Promise(r => setTimeout(r, 450));
-            overlay.classList.add('hidden');
-            overlay.classList.remove('flex');
-
-            playTone('star');
-            saveState();
-            renderDeckSelector();
-            renderAllViews();
-
-            // Immediately jump straight into Quiz Time! so the child can answer questions right away
-            setActiveTab('quiz');
-            startQuizSession('all');
-            showToast(`Your photo quiz is ready! ${newDeck.questions.length} questions made! 🎯`, 'success');
-        }
-
-        // =========================================================================
-        // 6. PARENT / KID PHOTO SCANNER & NOTE MAKER MODAL
-        // =========================================================================
-        let importMode = 'photo';
-        let selectedPhotoBase64 = '';
-        let selectedPhotoMime = 'image/jpeg';
-        let isSampleWorksheet = false;
-
-        function openImportModal(defaultMode = 'photo') {
-            switchImportMode(defaultMode);
-            const modal = document.getElementById('import-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closeImportModal() {
-            const modal = document.getElementById('import-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        function switchImportMode(mode) {
-            importMode = mode;
-            const photoTab = document.getElementById('import-tab-photo');
-            const textTab = document.getElementById('import-tab-text');
-            const photoSec = document.getElementById('import-photo-section');
-            const textSec = document.getElementById('import-text-section');
-            const submitLabel = document.getElementById('btn-process-import-label');
-
-            if (mode === 'photo') {
-                photoTab.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base bg-brand-blue text-white shadow-xs flex items-center justify-center gap-2 transition';
-                textTab.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base text-slate-700 hover:bg-amber-100 flex items-center justify-center gap-2 transition';
-                photoSec.classList.remove('hidden');
-                textSec.classList.add('hidden');
-                submitLabel.textContent = 'Read Photo & Make Quiz';
-            } else {
-                textTab.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base bg-brand-blue text-white shadow-xs flex items-center justify-center gap-2 transition';
-                photoTab.className = 'py-2.5 px-3 rounded-xl font-extrabold text-sm sm:text-base text-slate-700 hover:bg-amber-100 flex items-center justify-center gap-2 transition';
-                textSec.classList.remove('hidden');
-                photoSec.classList.add('hidden');
-                submitLabel.textContent = 'Create Fact Cards';
-            }
-        }
-
-        function handlePhotoFileSelected(event) {
-            const file = event.target.files?.[0];
-            if (!file) return;
-            isSampleWorksheet = false;
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const img = new Image();
-                img.onload = function () {
-                    // Resize smoothly so mobile camera photos upload fast
-                    const maxDim = 1280;
-                    let w = img.width;
-                    let h = img.height;
-                    if (w > maxDim || h > maxDim) {
-                        if (w > h) {
-                            h = Math.round((h * maxDim) / w);
-                            w = maxDim;
-                        } else {
-                            w = Math.round((w * maxDim) / h);
-                            h = maxDim;
-                        }
-                    }
-                    const canvas = document.createElement('canvas');
-                    canvas.width = w;
-                    canvas.height = h;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, w, h);
-
-                    const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                    selectedPhotoBase64 = dataUrl.split(',')[1];
-                    selectedPhotoMime = 'image/jpeg';
-
-                    document.getElementById('photo-preview-img').src = dataUrl;
-                    document.getElementById('photo-file-label').textContent = file.name || 'study-page.jpg';
-                    document.getElementById('photo-dropzone').classList.add('hidden');
-                    document.getElementById('photo-preview-container').classList.remove('hidden');
-                    playTone('flip');
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function clearSelectedPhoto() {
-            selectedPhotoBase64 = '';
-            isSampleWorksheet = false;
-            document.getElementById('photo-file-input').value = '';
-            document.getElementById('photo-preview-container').classList.add('hidden');
-            document.getElementById('photo-dropzone').classList.remove('hidden');
-        }
-
-        function loadSampleWorksheetPhoto() {
-            // Draw a crisp sample elementary worksheet onto an offscreen canvas so offline & demo testing work immediately
-            const canvas = document.createElement('canvas');
-            canvas.width = 760;
-            canvas.height = 480;
-            const ctx = canvas.getContext('2d');
-
-            ctx.fillStyle = '#FFFDF7';
-            ctx.fillRect(0, 0, 760, 480);
-            ctx.strokeStyle = '#38BDF8';
-            ctx.lineWidth = 8;
-            ctx.strokeRect(16, 16, 728, 448);
-
-            ctx.fillStyle = '#0284C7';
-            ctx.font = 'bold 30px sans-serif';
-            ctx.fillText('2nd Grade Science: Butterfly Life Cycle', 44, 72);
-
-            ctx.fillStyle = '#1E293B';
-            ctx.font = 'bold 22px sans-serif';
-            const lines = [
-                '1. A butterfly starts its life as a tiny egg laid on a green leaf.',
-                '2. A hungry caterpillar hatches from the egg and eats many leaves.',
-                '3. Next, the caterpillar forms a hard shell called a chrysalis.',
-                '4. Inside the chrysalis, it changes into a colorful adult butterfly.'
-            ];
-            lines.forEach((line, i) => {
-                ctx.fillText(line, 44, 145 + i * 72);
-            });
-
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-            selectedPhotoBase64 = dataUrl.split(',')[1];
-            selectedPhotoMime = 'image/jpeg';
-            isSampleWorksheet = true;
-
-            document.getElementById('new-deck-emoji').value = '🦋';
-            document.getElementById('new-deck-title').value = 'Butterfly Life Cycle';
-            document.getElementById('photo-preview-img').src = dataUrl;
-            document.getElementById('photo-file-label').textContent = 'butterfly-worksheet.jpg';
-            document.getElementById('photo-dropzone').classList.add('hidden');
-            document.getElementById('photo-preview-container').classList.remove('hidden');
-            playTone('flip');
-        }
-
-        async function handleImportSubmit() {
-            if (importMode === 'photo') {
-                await processPhotoStudyPage();
-            } else {
-                await processImportedText();
-            }
-        }
-
-        async function processPhotoStudyPage() {
-            if (!selectedPhotoBase64) {
-                showToast('Please snap or choose a photo first!', 'error');
-                return;
-            }
-            const base64 = selectedPhotoBase64;
-            const mime = selectedPhotoMime;
-            const previewUrl = document.getElementById('photo-preview-img').src;
-            const sampleFlag = isSampleWorksheet;
-            clearSelectedPhoto();
-            closeImportModal();
-            await runInstantPhotoToQuizPipeline(base64, mime, previewUrl, sampleFlag);
-        }
-
-        function fillSamplePaste() {
-            document.getElementById('new-deck-emoji').value = '🦕';
-            document.getElementById('new-deck-title').value = 'Awesome Dinosaurs';
-            document.getElementById('raw-study-text').value =
-                'Tyrannosaurus Rex was a giant meat-eating dinosaur with huge jaws and sharp teeth. ' +
-                'Triceratops had three horns on its face and a large bony frill to protect its neck. ' +
-                'Brachiosaurus used its super long neck to reach leaves high up in the treetops. ' +
-                'Paleontologists are scientists who dig up and study dinosaur fossils.';
-        }
-
-        async function processImportedText() {
-            const rawText = document.getElementById('raw-study-text').value.trim();
-            if (!rawText) {
-                showToast('Please type or paste a sentence first!', 'error');
-                return;
-            }
-
-            const newTitle = document.getElementById('new-deck-title').value.trim();
-            const newEmoji = document.getElementById('new-deck-emoji').value.trim() || '📚';
-            const autoGen = document.getElementById('auto-generate-on-import').checked;
-
-            const sentences = rawText
-                .split(/\n+/)
-                .flatMap(line => line.match(/[^.!?]+[.!?]+/g) || [line])
-                .map(s => s.trim())
-                .filter(s => s.length >= 12);
-
-            if (sentences.length === 0) {
-                showToast('Please write a complete sentence!', 'error');
-                return;
-            }
-
-            let targetDeck;
-            if (newTitle) {
-                targetDeck = {
-                    id: 'deck-' + Date.now(),
-                    emoji: newEmoji,
-                    title: newTitle,
-                    subject: 'My Study Notes',
-                    color: 'sky',
-                    facts: [],
-                    questions: []
-                };
-                appState.decks.unshift(targetDeck);
-                appState.activeDeckId = targetDeck.id;
-            } else {
-                targetDeck = getActiveDeck();
-            }
-
-            const addedFacts = sentences.map((sentence, idx) => ({
-                id: 'f-' + Date.now() + '-' + idx,
-                text: sentence,
-                keywords: extractKidKeywords(sentence),
-                mastered: false
-            }));
-
-            targetDeck.facts.push(...addedFacts);
-            appState.factsCreated += addedFacts.length;
-            appState.stars += addedFacts.length * 2;
-
-            document.getElementById('raw-study-text').value = '';
-            document.getElementById('new-deck-title').value = '';
-            document.getElementById('new-deck-emoji').value = '';
-            closeImportModal();
-
-            playTone('star');
-            saveState();
-            renderDeckSelector();
-            renderAllViews();
-            showToast(`Made ${addedFacts.length} Fact Cards! +${addedFacts.length * 2} Stars ⭐`, 'success');
-
-            if (autoGen) {
-                await generateQuestionsWithMagic(addedFacts);
-            }
-        }
-
-        // =========================================================================
-        // 7. MAGIC QUESTION MAKER (GEMINI API + KID-FRIENDLY OFFLINE FALLBACK)
-        // =========================================================================
-        async function generateQuestionsWithMagic(specificFacts = null) {
-            const deck = getActiveDeck();
-            const sourceFacts = specificFacts && specificFacts.length > 0 ? specificFacts : deck.facts;
-
-            if (sourceFacts.length === 0) {
-                showToast('Add some fact cards first!', 'error');
-                return;
-            }
-
-            const btn1 = document.getElementById('btn-magic-1');
-            const btn2 = document.getElementById('btn-magic-2');
-            [btn1, btn2].forEach(b => {
-                if (b) {
-                    b.disabled = true;
-                    b.innerHTML = `<span>✨</span><span>Making Questions...</span>`;
-                }
-            });
-
-            const factsPayload = sourceFacts.slice(0, 10).map(f => ({ id: f.id, text: f.text }));
-
-            const systemPrompt =
-                'You are a warm, encouraging elementary school teacher creating a practice quiz for a 7-to-8-year-old child. ' +
-                'Turn each fact into fun, clear, easy-to-read questions. Use simple words and cheerful explanations. ' +
-                'Create a mix of "mcq" (exactly 3 short options, 1 correct), "cloze" (sentence with [___] replacing 1 key word), and "tf" (True or False with options ["True", "False"]). ' +
-                'Never use em dashes anywhere.';
-
-            const userQuery = `Make 1 kid-friendly quiz question for each of these facts:\n${JSON.stringify(factsPayload)}`;
-
-            const apiKey = (appState.apiKey || '').trim();
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "ARRAY",
-                        items: {
-                            type: "OBJECT",
-                            properties: {
-                                factId: { type: "STRING" },
-                                type: { type: "STRING", enum: ["mcq", "cloze", "tf"] },
-                                prompt: { type: "STRING" },
-                                options: { type: "ARRAY", items: { type: "STRING" } },
-                                answer: { type: "STRING" },
-                                explanation: { type: "STRING" }
-                            },
-                            required: ["factId", "type", "prompt", "options", "answer", "explanation"]
-                        }
-                    }
-                }
-            };
-
-            let generated = [];
-            try {
-                if (!apiKey) throw new Error('No API key configured - using local mode');
-                const res = await fetchWithBackoff(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (!res.ok) throw new Error('Offline mode');
-                const data = await res.json();
-                const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!text) throw new Error('Empty response');
-                generated = JSON.parse(text);
-            } catch (err) {
-                generated = buildKidOfflineQuestions(sourceFacts, deck.facts);
-            }
-
-            let added = 0;
-            generated.forEach((item, idx) => {
-                const fact = deck.facts.find(f => f.id === item.factId) || sourceFacts[idx % sourceFacts.length];
-                if (!fact || !item.prompt || !item.answer) return;
-                if (deck.questions.some(q => q.prompt.toLowerCase() === item.prompt.toLowerCase())) return;
-
-                let cleanOptions = Array.isArray(item.options) ? item.options.map(o => o.replace(/—/g, '-')) : [];
-                if (item.type === 'mcq' && cleanOptions.length > 3) {
-                    // Keep 3 clear choices for ages 6-9
-                    const others = cleanOptions.filter(o => o !== item.answer).slice(0, 2);
-                    cleanOptions = [item.answer, ...others].sort(() => Math.random() - 0.5);
-                }
-
-                deck.questions.unshift({
-                    id: 'q-' + Date.now() + '-' + idx + '-' + Math.random().toString(36).slice(2, 5),
-                    factId: fact.id,
-                    type: ['mcq', 'cloze', 'tf'].includes(item.type) ? item.type : 'cloze',
-                    prompt: item.prompt.replace(/—/g, '-'),
-                    options: cleanOptions,
-                    answer: item.answer.replace(/—/g, '-'),
-                    explanation: (item.explanation || fact.text).replace(/—/g, '-')
-                });
-                added++;
-            });
-
-            [btn1, btn2].forEach(b => {
-                if (b) {
-                    b.disabled = false;
-                    b.innerHTML = `<span>🪄</span><span>Magic Question Maker</span>`;
-                }
-            });
-
-            playTone('star');
-            saveState();
-            renderAllViews();
-            showToast(`Magic Maker created ${added} new quiz questions! 🪄`, 'success');
-        }
-
-        async function fetchWithBackoff(url, options, retries = 3, delay = 900) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const res = await fetch(url, options);
-                    if (res.ok || res.status === 400 || res.status === 401 || res.status === 403) return res;
-                } catch (e) {
-                    if (i === retries - 1) throw e;
-                }
-                await new Promise(r => setTimeout(r, delay * Math.pow(2, i)));
-            }
-            throw new Error('Retry limit reached');
-        }
-
-        function buildKidOfflineQuestions(targetFacts, allDeckFacts) {
-            const results = [];
-            const wordBank = allDeckFacts.flatMap(f => f.keywords || []).filter(Boolean);
-
-            targetFacts.forEach((fact, index) => {
-                const kws = (fact.keywords && fact.keywords.length > 0) ? fact.keywords : extractKidKeywords(fact.text);
-                const targetWord = kws[0];
-                if (!targetWord) return;
-
-                const regex = new RegExp(targetWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-                const blankSentence = fact.text.replace(regex, '[___]');
-
-                if (index % 3 === 0 && blankSentence !== fact.text) {
-                    results.push({
-                        factId: fact.id,
-                        type: 'cloze',
-                        prompt: `Fill in the missing word: ${blankSentence}`,
-                        options: [],
-                        answer: targetWord,
-                        explanation: `Great memory! The missing word is "${targetWord}".`
-                    });
-                } else if (index % 3 === 1) {
-                    const wrongChoices = wordBank
-                        .filter(w => w.toLowerCase() !== targetWord.toLowerCase())
-                        .sort(() => Math.random() - 0.5)
-                        .slice(0, 2);
-                    while (wrongChoices.length < 2) {
-                        wrongChoices.push(wrongChoices.length === 0 ? 'A volcano' : 'A rainbow');
-                    }
-                    const options = [targetWord, ...wrongChoices].sort(() => Math.random() - 0.5);
-                    results.push({
-                        factId: fact.id,
-                        type: 'mcq',
-                        prompt: `Which word completes this fact? "${blankSentence}"`,
-                        options,
-                        answer: targetWord,
-                        explanation: `Yes! "${targetWord}" fits right into this fact!`
-                    });
-                } else {
-                    results.push({
-                        factId: fact.id,
-                        type: 'tf',
-                        prompt: `True or False: ${fact.text}`,
-                        options: ['True', 'False'],
-                        answer: 'True',
-                        explanation: `That is True! You remembered this fact.`
-                    });
-                }
-            });
-            return results;
-        }
-
-        function generateSingleFactQuestion(factId) {
-            const deck = getActiveDeck();
-            const fact = deck.facts.find(f => f.id === factId);
-            if (fact) generateQuestionsWithMagic([fact]);
-        }
-
-        // =========================================================================
-        // 8. QUESTION WORKSHOP VIEW & MANUAL QUESTION BUILDER
-        // =========================================================================
-        function renderQuestions() {
-            const deck = getActiveDeck();
-            const container = document.getElementById('questions-list');
-
-            if (deck.questions.length === 0) {
-                container.innerHTML = `
-                    <div class="col-span-full bg-white border-4 border-dashed border-purple-300 rounded-3xl p-10 text-center space-y-3">
-                        <div class="text-4xl">🪄</div>
-                        <p class="font-display text-xl font-bold text-slate-700">No quiz questions yet!</p>
-                        <button onclick="generateQuestionsWithMagic()" class="btn-bounce px-5 py-3 rounded-2xl bg-brand-orange text-white font-extrabold">Use Magic Question Maker</button>
-                    </div>`;
-                return;
-            }
-
-            container.innerHTML = deck.questions.map((q, idx) => {
-                const badge = q.type === 'mcq' ? '3 Choices' : q.type === 'tf' ? 'True / False' : 'Fill-in-the-Word';
-                return `
-                <div class="bg-white border-4 border-purple-100 rounded-3xl p-5 sm:p-6 shadow-tactile flex flex-col justify-between gap-4">
-                    <div>
-                        <div class="flex items-center justify-between gap-2 mb-3">
-                            <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-purple-100 text-brand-purple">
-                                #${idx + 1} · ${badge}
-                            </span>
-                            <div class="flex items-center gap-1.5">
-                                <button onclick="speakText(${JSON.stringify(q.prompt).replace(/"/g, '&quot;')})" class="p-1.5 rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200" title="Read Aloud">🔊</button>
-                                <button onclick="openQuestionModal('${q.id}')" class="p-1.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200" title="Edit">
-                                    <i data-lucide="pencil" class="w-4 h-4"></i>
-                                </button>
-                                <button onclick="deleteQuestion('${q.id}')" class="p-1.5 rounded-xl bg-slate-100 text-slate-400 hover:text-rose-500" title="Delete">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-
-                        <p class="text-lg font-bold text-slate-800 leading-snug">${escapeHtml(q.prompt)}</p>
-
-                        <div class="mt-3 px-3.5 py-2 rounded-2xl bg-emerald-50 border-2 border-emerald-200 text-emerald-800 text-sm font-extrabold">
-                            ✅ Answer: ${escapeHtml(q.answer)}
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-
-            if (window.lucide) lucide.createIcons();
-        }
-
-        function openQuestionModal(questionId = null) {
-            const deck = getActiveDeck();
-            if (deck.facts.length === 0) {
-                showToast('Add a fact card first!', 'error');
-                return;
-            }
-
-            const factSelect = document.getElementById('q-fact-id');
-            factSelect.innerHTML = deck.facts.map((f, i) =>
-                `<option value="${f.id}">Fact #${i + 1}: ${escapeHtml(f.text.slice(0, 42))}...</option>`
-            ).join('');
-
-            const existing = questionId ? deck.questions.find(q => q.id === questionId) : null;
-            document.getElementById('question-modal-title').textContent = existing ? 'Edit Question' : 'Add My Own Question';
-            document.getElementById('q-edit-id').value = existing ? existing.id : '';
-            document.getElementById('q-type').value = existing ? existing.type : 'mcq';
-            document.getElementById('q-fact-id').value = existing ? existing.factId : deck.facts[0].id;
-            document.getElementById('q-prompt').value = existing ? existing.prompt : '';
-            document.getElementById('q-answer').value = existing ? existing.answer : '';
-            document.getElementById('q-explanation').value = existing ? existing.explanation : '';
-
-            for (let i = 0; i < 3; i++) {
-                const val = existing?.options?.[i] || '';
-                document.getElementById(`q-opt-${i}`).value = val;
-                if (existing && val === existing.answer) {
-                    document.querySelector(`input[name="correct-opt"][value="${i}"]`).checked = true;
-                }
-            }
-
-            if (existing?.type === 'tf') {
-                const radio = document.querySelector(`input[name="tf-answer"][value="${existing.answer}"]`);
-                if (radio) radio.checked = true;
-            }
-
-            toggleQuestionTypeFields();
-            const modal = document.getElementById('question-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function closeQuestionModal() {
-            const modal = document.getElementById('question-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        function toggleQuestionTypeFields() {
-            const type = document.getElementById('q-type').value;
-            document.getElementById('mcq-options-container').classList.toggle('hidden', type !== 'mcq');
-            document.getElementById('tf-options-container').classList.toggle('hidden', type !== 'tf');
-            document.getElementById('direct-answer-container').classList.toggle('hidden', type !== 'cloze');
-        }
-
-        function saveQuestionForm(e) {
-            e.preventDefault();
-            const deck = getActiveDeck();
-            const editId = document.getElementById('q-edit-id').value;
-            const type = document.getElementById('q-type').value;
-            const factId = document.getElementById('q-fact-id').value;
-            const prompt = document.getElementById('q-prompt').value.trim();
-            const explanation = document.getElementById('q-explanation').value.trim();
-
-            let options = [];
-            let answer = '';
-
-            if (type === 'mcq') {
-                options = [0, 1, 2].map(i => document.getElementById(`q-opt-${i}`).value.trim()).filter(Boolean);
-                const chosenIdx = parseInt(document.querySelector('input[name="correct-opt"]:checked').value, 10);
-                answer = document.getElementById(`q-opt-${chosenIdx}`).value.trim();
-                if (options.length < 2 || !answer) {
-                    showToast('Please fill in at least 2 choices and pick the right one!', 'error');
-                    return;
-                }
-            } else if (type === 'tf') {
-                options = ['True', 'False'];
-                answer = document.querySelector('input[name="tf-answer"]:checked').value;
-            } else {
-                answer = document.getElementById('q-answer').value.trim();
-                if (!answer) {
-                    showToast('Please type the missing word answer!', 'error');
-                    return;
-                }
-            }
-
-            if (editId) {
-                const q = deck.questions.find(item => item.id === editId);
-                if (q) Object.assign(q, { type, factId, prompt, options, answer, explanation });
-                showToast('Question updated! ⭐', 'success');
-            } else {
-                deck.questions.unshift({
-                    id: 'q-' + Date.now(),
-                    factId,
-                    type,
-                    prompt,
-                    options,
-                    answer,
-                    explanation
-                });
-                appState.stars += 3;
-                playTone('star');
-                showToast('Question saved! +3 Stars ⭐', 'success');
-            }
-
-            closeQuestionModal();
-            saveState();
-            renderAllViews();
-        }
-
-        function deleteQuestion(qId) {
-            const deck = getActiveDeck();
-            deck.questions = deck.questions.filter(q => q.id !== qId);
-            saveState();
-            renderAllViews();
-            showToast('Question removed');
-        }
-
-        // =========================================================================
-        // 9. QUIZ TIME! (GAME-STYLE PRACTICE TEST)
-        // =========================================================================
-        function startQuizSession(mode = 'all') {
-            const deck = getActiveDeck();
-            if (deck.questions.length === 0) {
-                showToast('Make some quiz questions first!', 'error');
-                return;
-            }
-
-            let pool = [...deck.questions];
-            if (mode === 'practice') {
-                const unmasteredFactIds = new Set(deck.facts.filter(f => !f.mastered).map(f => f.id));
-                const tricky = pool.filter(q => unmasteredFactIds.has(q.factId));
-                if (tricky.length > 0) pool = tricky;
-            }
-
-            pool.sort(() => Math.random() - 0.5);
-
-            quizSession = {
-                active: true,
-                queue: pool,
-                currentIndex: 0,
-                correctCount: 0,
-                starsEarnedThisRun: 0,
-                answeredCurrent: false,
-                resultsByFactId: {}
-            };
-
-            document.getElementById('quiz-setup-panel').classList.add('hidden');
-            document.getElementById('quiz-summary-panel').classList.add('hidden');
-            document.getElementById('quiz-active-panel').classList.remove('hidden');
-
-            playTone('flip');
-            renderCurrentQuizCard();
-        }
-
-        function renderCurrentQuizCard() {
-            const q = quizSession.queue[quizSession.currentIndex];
-            if (!q) {
-                finishQuizSession();
-                return;
-            }
-
-            quizSession.answeredCurrent = false;
-            const total = quizSession.queue.length;
-            const current = quizSession.currentIndex + 1;
-
-            document.getElementById('quiz-progress-text').textContent = `Question ${current} of ${total}`;
-            document.getElementById('quiz-progress-bar').style.width = `${(current / total) * 100}%`;
-
-            const badgeMap = { mcq: 'PICK THE RIGHT CHOICE', tf: 'TRUE OR FALSE', cloze: 'FILL IN THE WORD' };
-            document.getElementById('active-q-type-badge').textContent = badgeMap[q.type] || 'QUIZ QUESTION';
-            document.getElementById('active-q-prompt').textContent = q.prompt;
-            document.getElementById('active-q-feedback').classList.add('hidden');
-
-            if (appState.autoReadQuiz) {
-                setTimeout(() => speakText(q.prompt), 250);
-            }
-
-            const choicesWrap = document.getElementById('active-q-choices');
-            const textWrap = document.getElementById('active-q-text-wrap');
-            const textInput = document.getElementById('active-q-text-input');
-
-            if ((q.type === 'mcq' || q.type === 'tf') && q.options?.length > 0) {
-                choicesWrap.classList.remove('hidden');
-                textWrap.classList.add('hidden');
-                const badges = ['A', 'B', 'C'];
-                choicesWrap.innerHTML = q.options.map((opt, idx) => `
-                    <div class="flex items-center gap-2">
-                        <button onclick="selectChoiceOption(${idx}, event)" class="quiz-choice-btn btn-bounce flex-1 text-left p-4 sm:p-5 rounded-2xl border-3 border-slate-200 bg-sunny-soft hover:border-brand-blue flex items-center gap-4">
-                            <span class="w-9 h-9 rounded-xl bg-white border-2 border-slate-200 font-display font-bold text-lg text-slate-700 flex items-center justify-center shrink-0">
-                                ${q.type === 'tf' ? (opt === 'True' ? '✅' : '❌') : badges[idx] || idx + 1}
-                            </span>
-                            <span class="text-base sm:text-xl font-extrabold text-slate-800">${escapeHtml(opt)}</span>
-                        </button>
-                        <button onclick="speakText(${JSON.stringify(opt).replace(/"/g, '&quot;')})" title="Read choice aloud" class="btn-bounce p-4 rounded-2xl bg-amber-100 border-2 border-amber-200 text-amber-900 hover:bg-amber-200 shrink-0">
-                            🔊
-                        </button>
-                    </div>
-                `).join('');
-            } else {
-                choicesWrap.classList.add('hidden');
-                textWrap.classList.remove('hidden');
-                textInput.value = '';
-                textInput.disabled = false;
-                document.getElementById('btn-submit-text-answer').disabled = false;
-                setTimeout(() => textInput.focus(), 60);
-            }
-        }
-
-        function speakCurrentQuestion() {
-            const q = quizSession.queue[quizSession.currentIndex];
-            if (q) speakText(q.prompt);
-        }
-
-        function selectChoiceOption(idx, event) {
-            if (quizSession.answeredCurrent) return;
-            const q = quizSession.queue[quizSession.currentIndex];
-            const chosen = q.options[idx];
-            const isCorrect = chosen.trim().toLowerCase() === q.answer.trim().toLowerCase();
-
-            document.querySelectorAll('.quiz-choice-btn').forEach((btn, i) => {
-                btn.disabled = true;
-                const val = q.options[i];
-                if (val.trim().toLowerCase() === q.answer.trim().toLowerCase()) {
-                    btn.classList.remove('border-slate-200', 'bg-sunny-soft');
-                    btn.classList.add('border-emerald-500', 'bg-emerald-100');
-                } else if (i === idx && !isCorrect) {
-                    btn.classList.remove('border-slate-200', 'bg-sunny-soft');
-                    btn.classList.add('border-amber-500', 'bg-amber-100');
-                }
-            });
-
-            if (isCorrect && event) {
-                spawnStarBurst(event.clientX, event.clientY);
-            }
-            handleQuizOutcome(isCorrect);
-        }
-
-        function submitTextAnswer() {
-            if (quizSession.answeredCurrent) return;
-            const q = quizSession.queue[quizSession.currentIndex];
-            const input = document.getElementById('active-q-text-input');
-            const val = input.value.trim();
-            input.disabled = true;
-            document.getElementById('btn-submit-text-answer').disabled = true;
-
-            const target = q.answer.trim().toLowerCase();
-            const attempt = val.toLowerCase();
-            const isCorrect = attempt.length > 0 && (
-                attempt === target ||
-                (target.includes(attempt) && attempt.length >= Math.max(3, target.length - 2)) ||
-                attempt.includes(target)
-            );
-
-            if (isCorrect) {
-                const rect = input.getBoundingClientRect();
-                spawnStarBurst(rect.left + rect.width / 2, rect.top);
-            }
-            handleQuizOutcome(isCorrect);
-        }
-
-        function handleQuizOutcome(isCorrect) {
-            quizSession.answeredCurrent = true;
-            const q = quizSession.queue[quizSession.currentIndex];
-            const deck = getActiveDeck();
-            const sourceFact = deck.facts.find(f => f.id === q.factId);
-
-            const banner = document.getElementById('feedback-banner');
-            const emoji = document.getElementById('feedback-emoji');
-            const heading = document.getElementById('feedback-heading');
-
-            if (isCorrect) {
-                quizSession.correctCount += 1;
-                quizSession.starsEarnedThisRun += 10;
-                appState.stars += 10;
-                if (sourceFact) {
-                    sourceFact.mastered = true;
-                    quizSession.resultsByFactId[sourceFact.id] = true;
-                }
-                playTone('correct');
-
-                banner.className = 'p-5 rounded-2xl border-3 border-emerald-400 bg-emerald-50 flex items-start gap-3.5';
-                emoji.textContent = '🌟';
-                heading.textContent = 'Awesome Job! +10 Stars!';
-                heading.className = 'font-display text-xl font-bold text-emerald-800';
-            } else {
-                if (sourceFact) {
-                    sourceFact.mastered = false;
-                    quizSession.resultsByFactId[sourceFact.id] = false;
-                }
-                playTone('tryAgain');
-
-                banner.className = 'p-5 rounded-2xl border-3 border-amber-400 bg-amber-50 flex items-start gap-3.5';
-                emoji.textContent = '💡';
-                heading.textContent = 'Good Try! Let\'s Check the Fact Card!';
-                heading.className = 'font-display text-xl font-bold text-amber-900';
-            }
-
-            document.getElementById('feedback-answer-reveal').textContent = `Right Answer: ${q.answer}`;
-            document.getElementById('feedback-explanation').textContent = q.explanation || '';
-            document.getElementById('feedback-source-fact').textContent = sourceFact ? sourceFact.text : '';
-
-            document.getElementById('active-q-feedback').classList.remove('hidden');
-            saveState();
-        }
-
-        function nextQuizQuestion() {
-            quizSession.currentIndex += 1;
-            if (quizSession.currentIndex < quizSession.queue.length) {
-                playTone('flip');
-                renderCurrentQuizCard();
-            } else {
-                finishQuizSession();
-            }
-        }
-
-        function finishQuizSession() {
-            quizSession.active = false;
-            appState.quizzesCompleted += 1;
-            saveState();
-
-            document.getElementById('quiz-active-panel').classList.add('hidden');
-            document.getElementById('quiz-summary-panel').classList.remove('hidden');
-
-            const total = quizSession.queue.length;
-            const correct = quizSession.correctCount;
-            document.getElementById('summary-stars-earned').textContent = `+${quizSession.starsEarnedThisRun} ⭐`;
-            document.getElementById('summary-score').textContent = `${correct}/${total}`;
-
-            const deck = getActiveDeck();
-            const masteredCount = deck.facts.filter(f => f.mastered).length;
-            document.getElementById('summary-mastered-count').textContent = `${masteredCount}/${deck.facts.length}`;
-
-            const headline = correct === total ? 'Superstar! Perfect Score!' : correct >= total / 2 ? 'Way to Go, Explorer!' : 'Great Practice Session!';
-            document.getElementById('summary-headline').textContent = headline;
-
-            const reviewList = document.getElementById('summary-fact-review');
-            reviewList.innerHTML = deck.facts.map(f => `
-                <div class="p-3.5 rounded-2xl border-2 ${f.mastered ? 'border-emerald-200 bg-emerald-50/70' : 'border-amber-200 bg-amber-50/70'} flex items-center justify-between gap-3">
-                    <span class="text-sm font-bold text-slate-800">${escapeHtml(f.text)}</span>
-                    <span class="text-xs font-extrabold px-2.5 py-1 rounded-full shrink-0 ${f.mastered ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'}">
-                        ${f.mastered ? '⭐ Mastered' : '🔄 Practice Again'}
-                    </span>
-                </div>
-            `).join('');
-
-            playTone('correct');
-        }
-
-        function endQuizEarly() {
-            quizSession.active = false;
-            resetQuizToSetup();
-        }
-
-        function resetQuizToSetup() {
-            document.getElementById('quiz-active-panel').classList.add('hidden');
-            document.getElementById('quiz-summary-panel').classList.add('hidden');
-            document.getElementById('quiz-setup-panel').classList.remove('hidden');
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (appState.activeTab === 'quiz' && quizSession.active && !quizSession.answeredCurrent) {
-                const q = quizSession.queue[quizSession.currentIndex];
-                if (q && q.type === 'cloze' && e.key === 'Enter') {
-                    e.preventDefault();
-                    submitTextAnswer();
-                }
-            }
-        });
-
-        // =========================================================================
-        // 10. BADGE SHELF, PROGRESS & PRINTABLE WORKSHEET
-        // =========================================================================
-        function renderAnalytics() {
-            const spaceDeck = appState.decks.find(d => d.id === 'deck-space');
-            const animalDeck = appState.decks.find(d => d.id === 'deck-animals');
-            const worldDeck = appState.decks.find(d => d.id === 'deck-world');
-
-            const badges = [
-                {
-                    emoji: '🚀',
-                    title: 'Space Explorer',
-                    desc: 'Master 3 Space facts',
-                    unlocked: (spaceDeck?.facts.filter(f => f.mastered).length || 0) >= 3 || appState.stars >= 50
-                },
-                {
-                    emoji: '🦁',
-                    title: 'Animal Expert',
-                    desc: 'Master 2 Animal facts',
-                    unlocked: (animalDeck?.facts.filter(f => f.mastered).length || 0) >= 2 || appState.stars >= 40
-                },
-                {
-                    emoji: '🌍',
-                    title: 'Globe Trotter',
-                    desc: 'Master 2 World facts',
-                    unlocked: (worldDeck?.facts.filter(f => f.mastered).length || 0) >= 2 || appState.stars >= 60
-                },
-                {
-                    emoji: '🏆',
-                    title: 'Quiz Whiz',
-                    desc: 'Finish 1 Practice Quiz',
-                    unlocked: appState.quizzesCompleted >= 1 || appState.stars >= 35
-                }
-            ];
-
-            document.getElementById('badge-shelf').innerHTML = badges.map(b => `
-                <div class="p-4 rounded-3xl border-3 text-center transition ${b.unlocked ? 'border-amber-300 bg-sunny-soft shadow-tactile' : 'border-slate-200 bg-slate-50 opacity-55'}">
-                    <div class="text-4xl mb-2">${b.unlocked ? b.emoji : '🔒'}</div>
-                    <h4 class="font-display font-bold text-base text-slate-800">${b.title}</h4>
-                    <p class="text-xs font-bold text-slate-500 mt-0.5">${b.unlocked ? 'Unlocked! ⭐' : b.desc}</p>
-                </div>
-            `).join('');
-
-            const deck = getActiveDeck();
-            document.getElementById('analytics-facts-breakdown').innerHTML = deck.facts.map((f, idx) => `
-                <div class="p-4 rounded-2xl border-2 ${f.mastered ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200 bg-amber-50/50'} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div class="flex items-start gap-3">
-                        <span class="text-xl">${f.mastered ? '⭐' : '📙'}</span>
-                        <p class="text-base font-bold text-slate-800">${escapeHtml(f.text)}</p>
-                    </div>
-                    <span class="text-xs font-extrabold px-3 py-1.5 rounded-full shrink-0 self-start sm:self-auto ${f.mastered ? 'bg-emerald-200 text-emerald-900' : 'bg-amber-200 text-amber-900'}">
-                        ${f.mastered ? 'Mastered!' : 'Practice Again'}
-                    </span>
-                </div>
-            `).join('');
-        }
-
-        function resetDeckProgress() {
-            showConfirmModal(
-                'Reset Topic Stars?',
-                'This will set all facts in this topic back to Practice Again so you can replay from the start.',
-                () => {
-                    const deck = getActiveDeck();
-                    deck.facts.forEach(f => f.mastered = false);
-                    saveState();
-                    renderAllViews();
-                    showToast('Topic reset! Ready to play again 🌟');
-                }
-            );
-        }
-
-        function preparePrintSheet() {
-            const deck = getActiveDeck();
-            const sheet = document.getElementById('print-sheet');
-            sheet.innerHTML = `
-                <div class="border-b-4 border-black pb-4 mb-6 flex items-center justify-between">
-                    <div>
-                        <p class="text-xs font-extrabold uppercase tracking-widest">RecallKids Studio · Practice Worksheet</p>
-                        <h1 class="font-display text-3xl font-bold mt-1">${deck.emoji || '📘'} ${escapeHtml(deck.title)}</h1>
-                    </div>
-                    <div class="text-right text-sm font-bold">
-                        <p>Name: ______________________</p>
-                        <p class="mt-2">Stars Earned: ⭐⭐⭐⭐⭐</p>
-                    </div>
-                </div>
-
-                <h2 class="font-display text-xl font-bold mb-3">Part 1: Read & Remember Facts</h2>
-                <ol class="list-decimal pl-6 space-y-2.5 text-base font-semibold mb-8">
-                    ${deck.facts.map(f => `<li>${escapeHtml(f.text)}</li>`).join('')}
-                </ol>
-
-                <h2 class="font-display text-xl font-bold mb-3">Part 2: Practice Quiz</h2>
-                <ol class="list-decimal pl-6 space-y-5 text-base font-semibold mb-8">
-                    ${deck.questions.map(q => `
-                        <li>
-                            <p class="font-bold">${escapeHtml(q.prompt)}</p>
-                            ${q.options?.length ? `
-                                <div class="mt-1.5 space-y-1 text-sm">
-                                    ${q.options.map(o => `<p>O &nbsp; ${escapeHtml(o)}</p>`).join('')}
-                                </div>
-                            ` : `<p class="mt-3 border-b-2 border-black w-64"></p>`}
-                        </li>
-                    `).join('')}
-                </ol>
-
-                <div class="border-t-2 border-dashed border-gray-400 pt-4">
-                    <p class="text-xs font-extrabold uppercase">Parent & Kid Answer Key:</p>
-                    <p class="text-xs font-bold mt-1">
-                        ${deck.questions.map((q, i) => `(${i + 1}) ${escapeHtml(q.answer)}`).join('   |   ')}
-                    </p>
-                </div>
+            return `
+              <button type="button" class="${cls}" ${quizSession.answered ? "disabled" : ""} onclick='submitAnswer(${JSON.stringify(opt)})'>
+                ${escapeHtml(opt)}
+              </button>
             `;
-        }
+          }).join("")}
+        </div>
+        ${quizSession.answered ? `
+          <div class="feedback-banner ${quizSession.selectedOption === q.answer ? "feedback-good" : "feedback-try"}">
+            ${quizSession.selectedOption === q.answer ? "🌟 Yay! That's right! +1 Star!" : `💡 Good try! The answer is: ${escapeHtml(q.answer)}`}
+            <div style="font-size:0.98rem; margin-top:6px; font-weight:700;">${escapeHtml(q.explanation || "")}</div>
+          </div>
+          <div style="margin-top:16px;">
+            <button type="button" class="btn btn-mint" onclick="nextQuestion()">Next Question ➡️</button>
+          </div>
+        ` : ""}
+      `;
 
-        window.addEventListener('beforeprint', preparePrintSheet);
+      if (state.autoRead && !quizSession.answered) {
+        speakText(q.prompt);
+      }
+    }
 
-        // =========================================================================
-        // 11. INITIALIZATION
-        // =========================================================================
-        // 11. HELPER UTILITIES (TOASTS, CONFIRM MODAL, STAR BURST) & INIT
-        // =========================================================================
-        function escapeHtml(str) {
-            return String(str || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
+    function speakCurrentQuestion() {
+      const deck = getActiveDeck();
+      const q = deck.questions[quizSession.index];
+      if (q) speakText(q.prompt);
+    }
 
-        function showToast(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            if (!container) return;
-            const toast = document.createElement('div');
-            const styles = type === 'error'
-                ? 'bg-rose-500 text-white border-rose-700'
-                : type === 'success'
-                    ? 'bg-emerald-500 text-white border-emerald-700'
-                    : 'bg-slate-800 text-white border-slate-950';
-            toast.className = `pointer-events-auto px-4 py-3 rounded-2xl border-2 font-extrabold text-sm shadow-xl animate-pop ${styles}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transition = 'opacity 0.25s ease';
-                setTimeout(() => toast.remove(), 260);
-            }, 3200);
-        }
+    function submitAnswer(option) {
+      if (quizSession.answered) return;
+      const deck = getActiveDeck();
+      const q = deck.questions[quizSession.index];
+      quizSession.answered = true;
+      quizSession.selectedOption = option;
 
-        function showConfirmModal(title, message, onConfirm) {
-            const modal = document.getElementById('confirm-modal');
-            document.getElementById('confirm-title').textContent = title;
-            document.getElementById('confirm-message').textContent = message;
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+      if (option === q.answer) {
+        quizSession.score += 1;
+        state.stars += 1;
+        saveState();
+        updateHeaderButtons();
+        playTone("star");
+        if (state.autoRead) speakText("Great job! " + (q.explanation || ""));
+      } else {
+        playTone("oops");
+        if (state.autoRead) speakText("Good try! The answer is " + q.answer + ". " + (q.explanation || ""));
+      }
+      renderQuiz();
+    }
 
-            const close = () => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            };
-            document.getElementById('confirm-cancel').onclick = close;
-            document.getElementById('confirm-ok').onclick = () => {
-                close();
-                if (typeof onConfirm === 'function') onConfirm();
-            };
-        }
+    function nextQuestion() {
+      quizSession.index += 1;
+      quizSession.answered = false;
+      quizSession.selectedOption = null;
+      playTone("tap");
+      renderQuiz();
+    }
 
-        function spawnStarBurst(x, y) {
-            const stars = ['⭐', '🌟', '✨'];
-            for (let i = 0; i < 5; i++) {
-                const el = document.createElement('div');
-                el.className = 'star-burst text-2xl';
-                el.textContent = stars[i % stars.length];
-                el.style.left = `${(x || window.innerWidth / 2) + (Math.random() * 60 - 30)}px`;
-                el.style.top = `${(y || window.innerHeight / 2) + (Math.random() * 30 - 15)}px`;
-                document.body.appendChild(el);
-                setTimeout(() => el.remove(), 950);
+    // Manual Notes to Deck
+    function createDeckFromNotes() {
+      const titleInput = document.getElementById("customDeckTitle").value.trim();
+      const notes = document.getElementById("customNotesInput").value.trim();
+      if (!notes) {
+        alert("Please type or paste a few sentences first!");
+        return;
+      }
+      const generated = buildFallbackDeckFromText(notes, titleInput || "My Study Notes");
+      state.decks.unshift(generated);
+      state.activeDeckId = generated.id;
+      saveState();
+      renderDeckStrip();
+      document.getElementById("customDeckTitle").value = "";
+      document.getElementById("customNotesInput").value = "";
+      playTone("star");
+      startQuizNow();
+    }
+
+    // Badges & Printable View
+    function renderBadges() {
+      const badges = [
+        { icon: "🌟", title: "First Star", desc: "Earn 1 quiz star", unlocked: state.stars >= 1 },
+        { icon: "🚀", title: "Super Reader", desc: "Earn 5 quiz stars", unlocked: state.stars >= 5 },
+        { icon: "📸", title: "Photo Wizard", desc: "Scan a study page", unlocked: state.decks.some(d => d.photoDataUrl) },
+        { icon: "🏆", title: "Quiz Champion", desc: "Earn 15 quiz stars", unlocked: state.stars >= 15 }
+      ];
+
+      document.getElementById("badgeGrid").innerHTML = badges.map(b => `
+        <div class="badge-item ${b.unlocked ? "unlocked" : ""}">
+          <div style="font-size:2.5rem;">${b.unlocked ? b.icon : "🔒"}</div>
+          <h3 style="margin:8px 0 4px;">${b.title}</h3>
+          <p style="margin:0; font-size:0.92rem; color:#475569; font-weight:700;">${b.desc}</p>
+        </div>
+      `).join("");
+
+      const deck = getActiveDeck();
+      document.getElementById("printableSummary").innerHTML = `
+        <h3>📝 Printable Study Sheet: ${escapeHtml(deck.title)}</h3>
+        <ol style="line-height:1.8; font-weight:700;">
+          ${deck.facts.map(f => `<li>${escapeHtml(f.text)}</li>`).join("")}
+        </ol>
+      `;
+    }
+
+    // =========================================================
+    // PHOTO TO GEMINI VISION QUIZ PIPELINE
+    // =========================================================
+    document.getElementById("cameraPhotoInput").addEventListener("change", handlePhotoPicked);
+    document.getElementById("galleryPhotoInput").addEventListener("change", handlePhotoPicked);
+
+    function handlePhotoPicked(event) {
+      const file = event.target.files && event.target.files[0];
+      event.target.value = "";
+      if (!file) return;
+      processStudyPhotoFile(file);
+    }
+
+    function setScannerStep(stepNum) {
+      [1, 2, 3].forEach(n => {
+        const el = document.getElementById("step" + n);
+        el.classList.remove("active", "done");
+        if (n < stepNum) el.classList.add("done");
+        else if (n === stepNum) el.classList.add("active");
+      });
+    }
+
+    function cancelScanner() {
+      scanCancelled = true;
+      document.getElementById("scannerOverlay").classList.remove("open");
+    }
+
+    function prepareImageForScan(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error("Could not read image file"));
+        reader.onload = () => {
+          const rawDataUrl = reader.result;
+          const img = new Image();
+          img.onload = () => {
+            const maxDim = 1024;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
             }
-        }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.82);
+            const base64 = jpegDataUrl.split(",")[1];
+            resolve({ jpegDataUrl, base64, mimeType: "image/jpeg" });
+          };
+          img.onerror = () => {
+            // Fallback for formats the canvas cannot decode directly (like raw HEIC)
+            const base64 = String(rawDataUrl).split(",")[1] || "";
+            resolve({ jpegDataUrl: rawDataUrl, base64, mimeType: file.type || "image/jpeg" });
+          };
+          img.src = rawDataUrl;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
 
-        function renderAllViews() {
-            renderFacts();
-            renderQuestions();
-            renderAnalytics();
-            updateHeaderTelemetry();
-        }
+    async function processStudyPhotoFile(file) {
+      scanCancelled = false;
+      const overlay = document.getElementById("scannerOverlay");
+      const previewImg = document.getElementById("scannerPreviewImg");
+      const subtitle = document.getElementById("scannerSubtitle");
 
-        window.addEventListener('DOMContentLoaded', () => {
-            loadState();
-            renderDeckSelector();
-            setActiveTab(appState.activeTab || 'read');
-            renderAllViews();
-            if (window.lucide) lucide.createIcons();
+      setScannerStep(1);
+      subtitle.textContent = "Shrinking & sharpening your photo...";
+      overlay.classList.add("open");
+
+      try {
+        const prepared = await prepareImageForScan(file);
+        if (scanCancelled) return;
+        previewImg.src = prepared.jpegDataUrl;
+
+        setScannerStep(2);
+        subtitle.textContent = "Sending photo to Gemini Vision AI...";
+
+        let newDeck = await analyzeWithGeminiWorker(prepared.base64, prepared.mimeType);
+        if (scanCancelled) return;
+
+        if (!newDeck) {
+          subtitle.textContent = "Using built-in page reader...";
+          newDeck = await analyzeWithLocalOCR(prepared.jpegDataUrl);
+        }
+        if (scanCancelled) return;
+
+        setScannerStep(3);
+        subtitle.textContent = "Quiz is ready! Let's play!";
+        newDeck.photoDataUrl = prepared.jpegDataUrl;
+
+        await new Promise(r => setTimeout(r, 450));
+        if (scanCancelled) return;
+
+        overlay.classList.remove("open");
+        state.decks.unshift(newDeck);
+        state.activeDeckId = newDeck.id;
+        saveState();
+        renderDeckStrip();
+        playTone("star");
+        startQuizNow();
+      } catch (err) {
+        console.error("Photo scan error:", err);
+        overlay.classList.remove("open");
+        alert("Oops! We couldn't read that photo. Please try taking a brighter, closer picture!");
+      }
+    }
+
+    async function analyzeWithGeminiWorker(imageBase64, mimeType) {
+      if (!GEMINI_WORKER_URL || !imageBase64) return null;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 18000);
+
+      try {
+        const response = await fetch(GEMINI_WORKER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({ imageBase64, mimeType })
         });
-    </script>
+        clearTimeout(timeoutId);
+
+        if (!response.ok) return null;
+        const data = await response.json();
+        if (!data || !Array.isArray(data.facts) || data.facts.length === 0) return null;
+
+        const normalizedQuestions = (data.questions || []).map(q => ({
+          type: q.type || "mcq",
+          prompt: q.prompt || "What did we just read?",
+          options: Array.isArray(q.options) && q.options.length >= 2
+            ? q.options
+            : (q.type === "tf" ? ["True", "False"] : [q.answer, "Something else", "None of these"]),
+          answer: q.answer,
+          explanation: q.explanation || ""
+        }));
+
+        if (normalizedQuestions.length === 0) {
+          return buildFallbackDeckFromText(data.facts.map(f => f.text).join(". "), data.title || "Photo Study Page");
+        }
+
+        return {
+          id: "photo_" + Date.now(),
+          emoji: "📸",
+          title: data.title || "My Photo Page",
+          facts: data.facts.map(f => ({
+            text: f.text || String(f),
+            keyword: f.keyword || pickKeyword(f.text || String(f))
+          })),
+          questions: normalizedQuestions
+        };
+      } catch (err) {
+        clearTimeout(timeoutId);
+        console.warn("Gemini Worker fallback triggered:", err);
+        return null;
+      }
+    }
+
+    async function analyzeWithLocalOCR(imageDataUrl) {
+      try {
+        if (window.Tesseract) {
+          const result = await Tesseract.recognize(imageDataUrl, "eng");
+          const cleanText = (result && result.data && result.data.text ? result.data.text : "")
+            .replace(/\s+/g, " ")
+            .trim();
+          if (cleanText.length >= 20) {
+            return buildFallbackDeckFromText(cleanText, "Scanned Study Page");
+          }
+        }
+      } catch (e) {
+        console.warn("Local OCR fallback failed:", e);
+      }
+      return buildFallbackDeckFromText(
+        "Reading carefully helps our brains remember new ideas. Practice quizzes make memory stronger every day.",
+        "My Study Snapshot"
+      );
+    }
+
+    function buildFallbackDeckFromText(rawText, title) {
+      const sentences = rawText
+        .split(/[.!?]+/)
+        .map(s => s.trim())
+        .filter(s => s.split(/\s+/).length >= 4)
+        .slice(0, 5);
+
+      const safeSentences = sentences.length > 0
+        ? sentences
+        : ["Every day we learn new facts by reading and practicing."];
+
+      const facts = safeSentences.map(s => {
+        const sentence = s.endsWith(".") ? s : s + ".";
+        return { text: sentence, keyword: pickKeyword(sentence) };
+      });
+
+      const questions = facts.map((fact, idx) => {
+        const key = fact.keyword;
+        const blanked = fact.text.replace(new RegExp(`\\b${escapeRegExp(key)}\\b`, "i"), "______");
+        const distractors = ["banana", "spaceship", "dinosaur", "rainbow", "penguin"]
+          .filter(w => w.toLowerCase() !== key.toLowerCase())
+          .slice(0, 2);
+        const options = shuffleArray([key, ...distractors]);
+        return {
+          type: "mcq",
+          prompt: `Fill in the missing word: "${blanked}"`,
+          options,
+          answer: key,
+          explanation: fact.text
+        };
+      });
+
+      return {
+        id: "deck_" + Date.now(),
+        emoji: "📘",
+        title,
+        facts,
+        questions
+      };
+    }
+
+    function runSamplePhotoDemo() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 720;
+      canvas.height = 420;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#FFFBEB";
+      ctx.fillRect(0, 0, 720, 420);
+      ctx.strokeStyle = "#F59E0B";
+      ctx.lineWidth = 8;
+      ctx.strokeRect(16, 16, 688, 388);
+      ctx.fillStyle = "#1E293B";
+      ctx.font = "bold 30px sans-serif";
+      ctx.fillText("Honeybee Science Worksheet", 44, 72);
+      ctx.font = "24px sans-serif";
+      ctx.fillText("1. Honeybees have five eyes to see flowers.", 44, 140);
+      ctx.fillText("2. Bees dance in a figure-eight to share directions.", 44, 200);
+      ctx.fillText("3. Honeybees make honey from flower nectar.", 44, 260);
+      ctx.fillText("4. A queen bee lays all the eggs in the hive.", 44, 320);
+
+      canvas.toBlob(blob => {
+        if (blob) processStudyPhotoFile(blob);
+      }, "image/jpeg", 0.9);
+    }
+
+    function pickKeyword(sentence) {
+      const stop = new Set(["there", "their", "about", "which", "these", "those", "where", "while", "every", "other"]);
+      const words = sentence.replace(/[^a-zA-Z\s]/g, "").split(/\s+/).filter(w => w.length >= 5 && !stop.has(w.toLowerCase()));
+      return words[0] || sentence.split(/\s+/)[0] || "learn";
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function escapeRegExp(str) {
+      return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    // Initialize App
+    updateHeaderButtons();
+    renderDeckStrip();
+    renderFacts();
+    if (window.lucide) {
+      try { window.lucide.createIcons(); } catch (e) {}
+    }
+  </script>
 </body>
 </html>
